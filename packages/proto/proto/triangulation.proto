@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package bigmt.triangulation;
+
+import "google/protobuf/timestamp.proto";
+
+// Bearing observation from a camera/device
+message BearingObservation {
+  string device_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  double device_latitude = 3;
+  double device_longitude = 4;
+  float device_altitude = 5;
+  float camera_heading = 6; // degrees from north
+  float camera_pitch = 7;   // degrees from horizontal
+  float bearing = 8;        // degrees from north to target
+  float confidence = 9;     // 0-1 confidence in bearing
+  string detection_id = 10; // reference to original detection
+}
+
+// Triangulation result
+message TriangulationResult {
+  string result_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  double latitude = 3;
+  double longitude = 4;
+  float altitude = 5;
+  float confidence = 6;     // 0-1 overall confidence
+  float uncertainty_meters = 7; // 95% confidence radius
+  repeated string observation_ids = 8; // contributing observations
+  TriangulationMethod method = 9;
+  map<string, float> quality_metrics = 10; // angular_spread, baseline_distance, etc.
+}
+
+enum TriangulationMethod {
+  TRIANGULATION_METHOD_UNSPECIFIED = 0;
+  TRIANGULATION_METHOD_BEARING_ONLY = 1;
+  TRIANGULATION_METHOD_BEARING_ELEVATION = 2;
+  TRIANGULATION_METHOD_RANSAC = 3;
+}
+
+// Request to triangulate from observations
+message TriangulateRequest {
+  repeated BearingObservation observations = 1;
+  optional double max_distance_km = 2; // max distance to search
+  optional float min_confidence = 3;   // minimum confidence threshold
+  optional TriangulationMethod preferred_method = 4;
+}
+
+// Response with triangulation results
+message TriangulateResponse {
+  repeated TriangulationResult results = 1;
+  bool success = 2;
+  string error_message = 3;
+  int32 observation_count = 4;
+  float processing_time_ms = 5;
+}

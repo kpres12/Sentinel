@@ -1,0 +1,20 @@
+{
+  "name": "@bigmt/proto",
+  "version": "1.0.0",
+  "description": "Protocol buffer definitions for wildfire operations platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "protoc --js_out=import_style=commonjs,binary:dist --grpc-web_out=import_style=commonjs,mode=grpcwebtext:dist --ts_out=dist proto/*.proto",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/google-protobuf": "^3.15.0",
+    "grpc-web": "^1.4.0",
+    "protoc-gen-ts": "^0.8.0"
+  },
+  "files": [
+    "dist",
+    "proto"
+  ]
+}
