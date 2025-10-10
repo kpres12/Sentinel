@@ -30,10 +30,12 @@ export default function HomePage() {
   const [activePanel, setActivePanel] = useState<string>('status')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [overlayVisible, setOverlayVisible] = useState(false)
+  const [terrainVisible, setTerrainVisible] = useState(true)
+  const [mapPoppedOut, setMapPoppedOut] = useState(false)
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="h-screen flex flex-col bg-dark-950 text-dark-100 overflow-hidden">
+      <div className="min-h-screen flex flex-col bg-dark-950 text-dark-100">
         {/* Tactical Header */}
         <div className="tactical-header border-b border-dark-700 bg-gradient-to-r from-dark-800 to-dark-900">
           <div className="flex items-center justify-between px-4 py-3">
@@ -92,17 +94,23 @@ export default function HomePage() {
                   <span className="text-xs font-bold text-white">3</span>
                 </div>
               </button>
-              <button
-                onClick={() => setOverlayVisible(!overlayVisible)}
-                className="p-2 rounded-md hover:bg-dark-700 transition-colors"
-              >
-                <Layers className="w-5 h-5 text-tactical-400" />
-              </button>
+                  <button
+                    onClick={() => setOverlayVisible(!overlayVisible)}
+                    className="p-2 rounded-md hover:bg-dark-700 transition-colors"
+                  >
+                    <Layers className="w-5 h-5 text-tactical-400" />
+                  </button>
+                  <button
+                    onClick={() => setMapPoppedOut(!mapPoppedOut)}
+                    className="p-2 rounded-md hover:bg-dark-700 transition-colors"
+                  >
+                    <MapPin className="w-5 h-5 text-tactical-400" />
+                  </button>
             </div>
           </div>
         </div>
         
-        <div className="flex flex-1 overflow-hidden relative">
+        <div className="flex flex-1 overflow-auto relative">
           {/* Tactical Sidebar */}
           {sidebarOpen && (
             <div className="w-80 bg-dark-900 border-r border-dark-700 flex flex-col">
@@ -177,6 +185,33 @@ export default function HomePage() {
                   <Target className="w-5 h-5 text-fire-400" />
                   <span className="text-sm font-mono text-tactical-300">SPREAD MODEL</span>
                 </button>
+                <button
+                  onClick={() => setActivePanel('deployment')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'deployment' ? 'bg-tacticalGreen-500/20 border border-tacticalGreen-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Zap className="w-5 h-5 text-tacticalGreen-400" />
+                  <span className="text-sm font-mono text-tactical-300">DEPLOY</span>
+                </button>
+                <button
+                  onClick={() => setActivePanel('missions')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'missions' ? 'bg-tactical-500/20 border border-tactical-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Radio className="w-5 h-5 text-tactical-400" />
+                  <span className="text-sm font-mono text-tactical-300">MISSIONS</span>
+                </button>
+                <button
+                  onClick={() => setActivePanel('intelligence')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'intelligence' ? 'bg-warning-500/20 border border-warning-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Shield className="w-5 h-5 text-warning-400" />
+                  <span className="text-sm font-mono text-tactical-300">INTELLIGENCE</span>
+                </button>
               </div>
             </div>
           )}
@@ -186,13 +221,15 @@ export default function HomePage() {
                 <div className="flex-1 relative bg-dark-900">
                   {/* Simulated Map Background */}
                   <div className="absolute inset-0 bg-gradient-to-br from-dark-800 via-dark-900 to-dark-800 z-10">
-                    {/* Terrain simulation - more visible */}
-                    <div className="absolute inset-0 opacity-40">
-                      <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-green-600/50 rounded-full blur-lg"></div>
-                      <div className="absolute top-1/3 right-1/3 w-36 h-36 bg-green-500/40 rounded-full blur-lg"></div>
-                      <div className="absolute bottom-1/3 left-1/3 w-60 h-60 bg-yellow-600/40 rounded-full blur-lg"></div>
-                      <div className="absolute bottom-1/4 right-1/4 w-42 h-42 bg-orange-600/50 rounded-full blur-lg"></div>
-                    </div>
+                    {/* Terrain simulation - toggleable */}
+                    {terrainVisible && (
+                      <div className="absolute inset-0 opacity-40">
+                        <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-green-600/50 rounded-full blur-lg"></div>
+                        <div className="absolute top-1/3 right-1/3 w-36 h-36 bg-green-500/40 rounded-full blur-lg"></div>
+                        <div className="absolute bottom-1/3 left-1/3 w-60 h-60 bg-yellow-600/40 rounded-full blur-lg"></div>
+                        <div className="absolute bottom-1/4 right-1/4 w-42 h-42 bg-orange-600/50 rounded-full blur-lg"></div>
+                      </div>
+                    )}
                     
                     {/* Fire Perimeter Simulation - much more visible */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
@@ -257,22 +294,44 @@ export default function HomePage() {
                   {overlayVisible && (
                     <div className="absolute top-4 left-4 bg-dark-800 rounded-lg p-4 border border-dark-700">
                       <h3 className="text-sm font-bold text-tactical-400 mb-3">MAP TOOLS</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button className="flex flex-col items-center gap-1 p-2 rounded hover:bg-dark-700 transition-all">
-                      <Target className="w-4 h-4 text-fire-400" />
-                      <span className="text-xs font-mono text-tactical-300">TARGET</span>
-                    </button>
-                    <button className="flex flex-col items-center gap-1 p-2 rounded hover:bg-dark-700 transition-all">
-                      <Wind className="w-4 h-4 text-tactical-400" />
-                      <span className="text-xs font-mono text-tactical-300">WIND</span>
-                    </button>
-                    <button className="flex flex-col items-center gap-1 p-2 rounded hover:bg-dark-700 transition-all">
-                      <Flame className="w-4 h-4 text-fire-500" />
-                      <span className="text-xs font-mono text-tactical-300">FIRE</span>
-                    </button>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button className="flex flex-col items-center gap-1 p-2 rounded hover:bg-dark-700 transition-all">
+                          <Target className="w-4 h-4 text-fire-400" />
+                          <span className="text-xs font-mono text-tactical-300">TARGET</span>
+                        </button>
+                        <button className="flex flex-col items-center gap-1 p-2 rounded hover:bg-dark-700 transition-all">
+                          <Wind className="w-4 h-4 text-tactical-400" />
+                          <span className="text-xs font-mono text-tactical-300">WIND</span>
+                        </button>
+                        <button className="flex flex-col items-center gap-1 p-2 rounded hover:bg-dark-700 transition-all">
+                          <Flame className="w-4 h-4 text-fire-500" />
+                          <span className="text-xs font-mono text-tactical-300">FIRE</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Terrain Toggle */}
+                  <div className="absolute top-4 right-4 bg-dark-800 rounded-lg p-3 border border-dark-700">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setTerrainVisible(!terrainVisible)}
+                        className={`px-3 py-1 rounded text-xs font-mono transition-all ${
+                          terrainVisible 
+                            ? 'bg-tacticalGreen-500/20 border border-tacticalGreen-500/30 text-tacticalGreen-400' 
+                            : 'bg-dark-700 border border-dark-600 text-tactical-muted'
+                        }`}
+                      >
+                        TERRAIN
+                      </button>
+                      <button
+                        onClick={() => setMapPoppedOut(!mapPoppedOut)}
+                        className="px-3 py-1 rounded text-xs font-mono bg-tactical-500/20 border border-tactical-500/30 text-tactical-400 hover:bg-tactical-500/30 transition-all"
+                      >
+                        POP OUT
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
             </div>
             
             {/* Bottom Panel */}
@@ -684,9 +743,355 @@ export default function HomePage() {
                   </div>
                     </div>
                   )}
+                  
+                  {activePanel === 'deployment' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">AUTONOMOUS DEPLOYMENT</h2>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="bg-dark-800 p-4 rounded-lg border border-fire-500/30 bg-fire-500/20">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Flame className="w-4 h-4 text-fire-400" />
+                            <span className="text-sm font-mono text-tactical-300">ACTIVE FIRE DETECTED</span>
+                          </div>
+                          <div className="text-sm font-mono text-fire-400">SECTOR 7 - IMMEDIATE DEPLOYMENT REQUIRED</div>
+                          <div className="text-xs text-tactical-muted">Size: 2.3 acres | Rate: 0.4 mph | Threat: HIGH</div>
+                        </div>
+                        
+                        <div className="bg-dark-800 p-4 rounded-lg">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Zap className="w-4 h-4 text-tacticalGreen-400" />
+                            <span className="text-sm font-mono text-tactical-300">AUTONOMOUS RESPONSE</span>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-mono text-tactical-muted">FIRELINE ALPHA</span>
+                              <button className="px-3 py-1 bg-tacticalGreen-500/20 border border-tacticalGreen-500/30 rounded text-xs font-mono text-tacticalGreen-400 hover:bg-tacticalGreen-500/30">
+                                DEPLOY
+                              </button>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-mono text-tactical-muted">SURVEILLANCE BRAVO</span>
+                              <button className="px-3 py-1 bg-tacticalGreen-500/20 border border-tacticalGreen-500/30 rounded text-xs font-mono text-tacticalGreen-400 hover:bg-tacticalGreen-500/30">
+                                DEPLOY
+                              </button>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-mono text-tactical-muted">PATROL CHARLIE</span>
+                              <button className="px-3 py-1 bg-tacticalGreen-500/20 border border-tacticalGreen-500/30 rounded text-xs font-mono text-tacticalGreen-400 hover:bg-tacticalGreen-500/30">
+                                DEPLOY
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-dark-800 p-4 rounded-lg">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Target className="w-4 h-4 text-tactical-400" />
+                            <span className="text-sm font-mono text-tactical-300">MISSION PARAMETERS</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">PRIORITY</p>
+                              <p className="text-sm font-mono text-fire-400">CRITICAL</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">ETA</p>
+                              <p className="text-sm font-mono text-tactical-400">8 min</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">ROUTE</p>
+                              <p className="text-sm font-mono text-tactical-400">OPTIMIZED</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">AUTONOMY</p>
+                              <p className="text-sm font-mono text-tacticalGreen-400">FULL</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-dark-800 p-4 rounded-lg border border-tacticalGreen-500/30 bg-tacticalGreen-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Zap className="w-4 h-4 text-tacticalGreen-400" />
+                            <span className="text-sm font-mono text-tactical-300">AUTO-DEPLOY ALL</span>
+                          </div>
+                          <button className="w-full px-4 py-2 bg-tacticalGreen-500/30 border border-tacticalGreen-500/50 rounded text-sm font-mono text-tacticalGreen-400 hover:bg-tacticalGreen-500/40 transition-all">
+                            DEPLOY FIRELINE FLEET
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activePanel === 'missions' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">ACTIVE MISSIONS</h2>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="bg-dark-800 p-4 rounded-lg border border-fire-500/30 bg-fire-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Flame className="w-4 h-4 text-fire-400" />
+                            <span className="text-sm font-mono text-tactical-300">MISSION ALPHA-7</span>
+                          </div>
+                          <div className="text-sm font-mono text-fire-400">FIRE SUPPRESSION - SECTOR 7</div>
+                          <div className="text-xs text-tactical-muted">Status: IN PROGRESS | ETA: 6 min | Progress: 45%</div>
+                          <div className="mt-2 w-full bg-dark-700 rounded-full h-1">
+                            <div className="bg-fire-400 h-1 rounded-full" style={{width: '45%'}}></div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-dark-800 p-4 rounded-lg border border-tacticalGreen-500/30 bg-tacticalGreen-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Eye className="w-4 h-4 text-tacticalGreen-400" />
+                            <span className="text-sm font-mono text-tactical-300">MISSION BRAVO-3</span>
+                          </div>
+                          <div className="text-sm font-mono text-tacticalGreen-400">SURVEILLANCE - SECTOR 3</div>
+                          <div className="text-xs text-tactical-muted">Status: ACTIVE | ETA: 12 min | Coverage: 78%</div>
+                          <div className="mt-2 w-full bg-dark-700 rounded-full h-1">
+                            <div className="bg-tacticalGreen-400 h-1 rounded-full" style={{width: '78%'}}></div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-dark-800 p-4 rounded-lg border border-tactical-500/30 bg-tactical-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Radio className="w-4 h-4 text-tactical-400" />
+                            <span className="text-sm font-mono text-tactical-300">MISSION CHARLIE-1</span>
+                          </div>
+                          <div className="text-sm font-mono text-tactical-400">PATROL - SECTOR 1</div>
+                          <div className="text-xs text-tactical-muted">Status: STANDBY | ETA: 15 min | Ready: YES</div>
+                          <div className="mt-2 w-full bg-dark-700 rounded-full h-1">
+                            <div className="bg-tactical-400 h-1 rounded-full" style={{width: '0%'}}></div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-dark-800 p-4 rounded-lg">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Activity className="w-4 h-4 text-tactical-400" />
+                            <span className="text-sm font-mono text-tactical-300">MISSION SUMMARY</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">ACTIVE</p>
+                              <p className="text-lg font-mono text-tacticalGreen-400">2</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">STANDBY</p>
+                              <p className="text-lg font-mono text-tactical-400">1</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">COMPLETED</p>
+                              <p className="text-lg font-mono text-tactical-400">5</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">SUCCESS RATE</p>
+                              <p className="text-lg font-mono text-tacticalGreen-400">94%</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activePanel === 'intelligence' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">OPERATIONAL INTELLIGENCE</h2>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="bg-dark-800 p-4 rounded-lg border border-warning-500/30 bg-warning-500/20">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Shield className="w-4 h-4 text-warning-400" />
+                            <span className="text-sm font-mono text-tactical-300">CONTEXTUAL AI ALERT</span>
+                          </div>
+                          <div className="text-sm font-mono text-warning-400">POTENTIAL IGNITION DETECTED</div>
+                          <div className="text-xs text-tactical-muted">Location: 2.1 km from fuel break | Wind: 20 mph → SW</div>
+                          <div className="text-xs text-tactical-muted">Vegetation: Dense chaparral | Slope: 15° | Risk: HIGH</div>
+                          <div className="text-xs text-tactical-muted">Recommendation: Deploy FireLine Alpha + Surveillance Bravo</div>
+                        </div>
+                        
+                        <div className="bg-dark-800 p-4 rounded-lg border border-fire-500/30 bg-fire-500/20">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Flame className="w-4 h-4 text-fire-400" />
+                            <span className="text-sm font-mono text-tactical-300">HISTORICAL FIRE ANALYSIS</span>
+                          </div>
+                          <div className="text-sm font-mono text-fire-400">SIMILAR FIRE PATTERN DETECTED</div>
+                          <div className="text-xs text-tactical-muted">2018 Creek Fire: Same terrain, wind pattern, vegetation</div>
+                          <div className="text-xs text-tactical-muted">Spread rate: 0.6 mph | Final size: 379,895 acres</div>
+                          <div className="text-xs text-tactical-muted">Lessons learned: Early suppression critical, focus on ridgeline</div>
+                        </div>
+                        
+                        <div className="bg-dark-800 p-4 rounded-lg border border-tacticalGreen-500/30 bg-tacticalGreen-500/20">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Target className="w-4 h-4 text-tacticalGreen-400" />
+                            <span className="text-sm font-mono text-tactical-300">AUTO-TASKING LOGIC</span>
+                          </div>
+                          <div className="text-sm font-mono text-tacticalGreen-400">NEAREST ASSETS DISPATCHED</div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-mono text-tactical-muted">FireLine Alpha</span>
+                              <span className="text-xs font-mono text-tacticalGreen-400">ETA: 6 min | Route: Optimized</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-mono text-tactical-muted">Surveillance Bravo</span>
+                              <span className="text-xs font-mono text-tacticalGreen-400">ETA: 4 min | Altitude: 800 ft</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-mono text-tactical-muted">Patrol Charlie</span>
+                              <span className="text-xs font-mono text-tacticalGreen-400">ETA: 8 min | Standby</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-dark-800 p-4 rounded-lg">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Activity className="w-4 h-4 text-tactical-400" />
+                            <span className="text-sm font-mono text-tactical-300">TERRAIN INTELLIGENCE</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">SLOPE</p>
+                              <p className="text-sm font-mono text-warning-400">15° (MODERATE)</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">ASPECT</p>
+                              <p className="text-sm font-mono text-tactical-400">SW (LEEWARD)</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">FUEL LOAD</p>
+                              <p className="text-sm font-mono text-fire-400">HIGH (8.2 tons/acre)</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-tactical-muted font-mono">MOISTURE</p>
+                              <p className="text-sm font-mono text-fire-400">6% (CRITICAL)</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-dark-800 p-4 rounded-lg">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Wind className="w-4 h-4 text-tactical-400" />
+                            <span className="text-sm font-mono text-tactical-300">WEATHER INTELLIGENCE</span>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-mono text-tactical-muted">WIND TREND</span>
+                              <span className="text-sm font-mono text-warning-400">INCREASING (15→22 mph)</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-mono text-tactical-muted">HUMIDITY TREND</span>
+                              <span className="text-sm font-mono text-fire-400">DECREASING (25→18%)</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs font-mono text-tactical-muted">FIRE WEATHER</span>
+                              <span className="text-sm font-mono text-fire-400">RED FLAG CONDITIONS</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
             </div>
           </div>
         </div>
+        
+        {/* Pop-out Map Window */}
+        {mapPoppedOut && (
+          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+            <div className="w-4/5 h-4/5 bg-dark-900 rounded-lg border border-dark-700 relative">
+              <div className="absolute top-4 right-4 flex gap-2">
+                <button
+                  onClick={() => setTerrainVisible(!terrainVisible)}
+                  className={`px-3 py-1 rounded text-xs font-mono transition-all ${
+                    terrainVisible 
+                      ? 'bg-tacticalGreen-500/20 border border-tacticalGreen-500/30 text-tacticalGreen-400' 
+                      : 'bg-dark-700 border border-dark-600 text-tactical-muted'
+                  }`}
+                >
+                  TERRAIN
+                </button>
+                <button
+                  onClick={() => setMapPoppedOut(false)}
+                  className="px-3 py-1 rounded text-xs font-mono bg-fire-500/20 border border-fire-500/30 text-fire-400 hover:bg-fire-500/30 transition-all"
+                >
+                  CLOSE
+                </button>
+              </div>
+              
+              {/* Pop-out Map Content */}
+              <div className="absolute inset-0 bg-gradient-to-br from-dark-800 via-dark-900 to-dark-800 rounded-lg">
+                {/* Terrain simulation - toggleable */}
+                {terrainVisible && (
+                  <div className="absolute inset-0 opacity-40">
+                    <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-green-600/50 rounded-full blur-lg"></div>
+                    <div className="absolute top-1/3 right-1/3 w-36 h-36 bg-green-500/40 rounded-full blur-lg"></div>
+                    <div className="absolute bottom-1/3 left-1/3 w-60 h-60 bg-yellow-600/40 rounded-full blur-lg"></div>
+                    <div className="absolute bottom-1/4 right-1/4 w-42 h-42 bg-orange-600/50 rounded-full blur-lg"></div>
+                  </div>
+                )}
+                
+                {/* Fire Perimeter Simulation */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <div className="w-40 h-40 border-4 border-red-500 rounded-full animate-pulse bg-red-500/30 shadow-lg shadow-red-500/50"></div>
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-28 h-28 border-4 border-red-400 rounded-full bg-red-400/40 shadow-lg shadow-red-400/50"></div>
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/70"></div>
+                </div>
+                
+                {/* Sensor Network Simulation */}
+                <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div className="absolute top-1/3 right-1/3 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div className="absolute bottom-1/3 left-1/3 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div className="absolute bottom-1/4 right-1/4 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div className="absolute top-1/2 left-1/6 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div className="absolute top-1/6 right-1/6 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                
+                {/* Device Locations */}
+                <div className="absolute top-1/5 left-1/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                <div className="absolute top-2/5 right-1/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                <div className="absolute bottom-1/5 left-2/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                <div className="absolute bottom-2/5 right-2/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                
+                {/* Risk Zones */}
+                <div className="absolute top-1/3 left-1/6 w-24 h-24 border-4 border-red-500/80 rounded-full bg-red-500/20 animate-pulse shadow-lg shadow-red-500/30"></div>
+                <div className="absolute bottom-1/3 right-1/6 w-20 h-20 border-4 border-orange-500/80 rounded-full bg-orange-500/20 animate-pulse shadow-lg shadow-orange-500/30"></div>
+                <div className="absolute top-2/3 left-2/3 w-16 h-16 border-4 border-yellow-500/80 rounded-full bg-yellow-500/20 animate-pulse shadow-lg shadow-yellow-500/30"></div>
+                
+                {/* Wind Direction Indicator */}
+                <div className="absolute top-4 left-4">
+                  <div className="flex items-center gap-2 bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-dark-700">
+                    <Wind className="w-4 h-4 text-tactical-400" />
+                    <span className="text-xs font-mono text-tactical-300">22 mph NW</span>
+                  </div>
+                </div>
+                
+                {/* Fire Status Indicator */}
+                <div className="absolute bottom-4 left-4">
+                  <div className="flex items-center gap-2 bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-fire-500/50">
+                    <div className="w-2 h-2 bg-fire-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-mono text-fire-400">ACTIVE FIRE</span>
+                  </div>
+                </div>
+                
+                {/* Scale Indicator */}
+                <div className="absolute bottom-4 right-4">
+                  <div className="bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-dark-700">
+                    <div className="w-16 h-1 bg-tactical-400 mb-1"></div>
+                    <span className="text-xs font-mono text-tactical-muted">1 mile</span>
+                  </div>
+                </div>
+                
+                {/* Map Title */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold text-white/80 mb-2 drop-shadow-lg">WILDFIRE OPERATIONS MAP</h2>
+                    <p className="text-sm text-white/60 font-mono">SECTOR 7 - ACTIVE FIRE DETECTED</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </QueryClientProvider>
   )
