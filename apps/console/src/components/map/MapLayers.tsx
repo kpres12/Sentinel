@@ -96,11 +96,8 @@ export function MapLayers({
         <Source
           id="risk-heatmap"
           type="raster"
-          data={{
-            type: 'raster',
-            tiles: ['/api/risk-tiles/{z}/{x}/{y}'],
-            tileSize: 256
-          }}
+          tiles={['/api/risk-tiles/{z}/{x}/{y}']}
+          tileSize={256}
         >
           <Layer
             id="risk-heatmap-layer"
