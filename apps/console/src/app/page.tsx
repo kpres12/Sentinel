@@ -32,10 +32,159 @@ export default function HomePage() {
   const [overlayVisible, setOverlayVisible] = useState(false)
   const [terrainVisible, setTerrainVisible] = useState(true)
   const [mapPoppedOut, setMapPoppedOut] = useState(false)
+  const [popupWindow, setPopupWindow] = useState<Window | null>(null)
+
+  const openPopupWindow = () => {
+    const popup = window.open('', 'mapPopup', 'width=1200,height=800,resizable=yes,scrollbars=yes,status=yes')
+    if (popup) {
+      setPopupWindow(popup)
+      setMapPoppedOut(true)
+      
+      // Write the popup content
+      popup.document.write(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Wildfire Operations Map</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <style>
+            body { margin: 0; padding: 0; background: #0f0f0f; color: #e5e5e5; font-family: 'JetBrains Mono', monospace; }
+            .tactical-header { background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); border-bottom: 1px solid #404040; }
+            .tactical-400 { color: #60a5fa; }
+            .tactical-300 { color: #94a3b8; }
+            .tactical-muted { color: #6b7280; }
+            .fire-400 { color: #f87171; }
+            .tacticalGreen-400 { color: #4ade80; }
+            .warning-400 { color: #fbbf24; }
+            .dark-800 { background-color: #1f2937; }
+            .dark-900 { background-color: #111827; }
+            .dark-700 { border-color: #374151; }
+            .border-fire-500 { border-color: #ef4444; }
+            .border-tacticalGreen-500 { border-color: #22c55e; }
+            .border-warning-500 { border-color: #f59e0b; }
+            .bg-fire-500 { background-color: #ef4444; }
+            .bg-tacticalGreen-500 { background-color: #22c55e; }
+            .bg-warning-500 { background-color: #f59e0b; }
+            .shadow-glow { box-shadow: 0 0 20px rgba(96, 165, 250, 0.3); }
+            .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+            @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+          </style>
+        </head>
+        <body>
+          <div class="h-screen flex flex-col bg-dark-950 text-dark-100">
+            <!-- Header -->
+            <div class="tactical-header border-b border-dark-700 bg-gradient-to-r from-dark-800 to-dark-900">
+              <div class="flex items-center justify-between px-4 py-3">
+                <div class="flex items-center gap-4">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-fire-500 rounded-lg flex items-center justify-center">
+                      <span class="text-white text-lg">🔥</span>
+                    </div>
+                    <div>
+                      <h1 class="text-xl font-bold text-tactical-400">BIGMT.AI FIRELINE</h1>
+                      <p class="text-sm text-tactical-muted">INTELLIGENCE PLATFORM</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="window.close()" class="px-4 py-2 bg-fire-500/20 border border-fire-500/30 rounded text-sm font-mono text-fire-400 hover:bg-fire-500/30 transition-all">
+                    CLOSE
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Map Content -->
+            <div class="flex-1 relative bg-dark-900">
+              <div class="absolute inset-0 bg-gradient-to-br from-dark-800 via-dark-900 to-dark-800 z-10">
+                <!-- Terrain simulation -->
+                <div class="absolute inset-0 opacity-40">
+                  <div class="absolute top-1/4 left-1/4 w-48 h-48 bg-green-600/50 rounded-full blur-lg"></div>
+                  <div class="absolute top-1/3 right-1/3 w-36 h-36 bg-green-500/40 rounded-full blur-lg"></div>
+                  <div class="absolute bottom-1/3 left-1/3 w-60 h-60 bg-yellow-600/40 rounded-full blur-lg"></div>
+                  <div class="absolute bottom-1/4 right-1/4 w-42 h-42 bg-orange-600/50 rounded-full blur-lg"></div>
+                </div>
+                
+                <!-- Fire Perimeter Simulation -->
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <div class="w-40 h-40 border-4 border-red-500 rounded-full animate-pulse bg-red-500/30 shadow-lg shadow-red-500/50"></div>
+                  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-28 h-28 border-4 border-red-400 rounded-full bg-red-400/40 shadow-lg shadow-red-400/50"></div>
+                  <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/70"></div>
+                </div>
+                
+                <!-- Sensor Network Simulation -->
+                <div class="absolute top-1/4 left-1/4 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div class="absolute top-1/3 right-1/3 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div class="absolute bottom-1/3 left-1/3 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div class="absolute bottom-1/4 right-1/4 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div class="absolute top-1/2 left-1/6 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                <div class="absolute top-1/6 right-1/6 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                
+                <!-- Device Locations -->
+                <div class="absolute top-1/5 left-1/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                <div class="absolute top-2/5 right-1/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                <div class="absolute bottom-1/5 left-2/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                <div class="absolute bottom-2/5 right-2/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                
+                <!-- Risk Zones -->
+                <div class="absolute top-1/3 left-1/6 w-24 h-24 border-4 border-red-500/80 rounded-full bg-red-500/20 animate-pulse shadow-lg shadow-red-500/30"></div>
+                <div class="absolute bottom-1/3 right-1/6 w-20 h-20 border-4 border-orange-500/80 rounded-full bg-orange-500/20 animate-pulse shadow-lg shadow-orange-500/30"></div>
+                <div class="absolute top-2/3 left-2/3 w-16 h-16 border-4 border-yellow-500/80 rounded-full bg-yellow-500/20 animate-pulse shadow-lg shadow-yellow-500/30"></div>
+                
+                <!-- Wind Direction Indicator -->
+                <div class="absolute top-4 left-4 z-20">
+                  <div class="flex items-center gap-2 bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-dark-700">
+                    <span class="text-xs font-mono text-tactical-300">🌪️ 22 mph NW</span>
+                  </div>
+                </div>
+                
+                <!-- Fire Status Indicator -->
+                <div class="absolute bottom-4 left-4">
+                  <div class="flex items-center gap-2 bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-fire-500/50">
+                    <div class="w-2 h-2 bg-fire-400 rounded-full animate-pulse"></div>
+                    <span class="text-xs font-mono text-fire-400">ACTIVE FIRE</span>
+                  </div>
+                </div>
+                
+                <!-- Scale Indicator -->
+                <div class="absolute bottom-4 right-4">
+                  <div class="bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-dark-700">
+                    <div class="w-16 h-1 bg-tactical-400 mb-1"></div>
+                    <span class="text-xs font-mono text-tactical-muted">1 mile</span>
+                  </div>
+                </div>
+                
+                <!-- Map Title -->
+                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                  <div class="text-center">
+                    <h2 class="text-2xl font-bold text-white/80 mb-2 drop-shadow-lg">WILDFIRE OPERATIONS MAP</h2>
+                    <p class="text-sm text-white/60 font-mono">SECTOR 7 - ACTIVE FIRE DETECTED</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `)
+      
+      popup.document.close()
+    }
+  }
+
+  const closePopupWindow = () => {
+    if (popupWindow && !popupWindow.closed) {
+      popupWindow.close()
+    }
+    setPopupWindow(null)
+    setMapPoppedOut(false)
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen flex flex-col bg-dark-950 text-dark-100">
+      <div className="min-h-screen bg-dark-950 text-dark-100">
         {/* Tactical Header */}
         <div className="tactical-header border-b border-dark-700 bg-gradient-to-r from-dark-800 to-dark-900">
           <div className="flex items-center justify-between px-4 py-3">
@@ -101,8 +250,9 @@ export default function HomePage() {
                     <Layers className="w-5 h-5 text-tactical-400" />
                   </button>
                   <button
-                    onClick={() => setMapPoppedOut(!mapPoppedOut)}
+                    onClick={openPopupWindow}
                     className="p-2 rounded-md hover:bg-dark-700 transition-colors"
+                    title="Pop out map"
                   >
                     <MapPin className="w-5 h-5 text-tactical-400" />
                   </button>
@@ -110,7 +260,7 @@ export default function HomePage() {
           </div>
         </div>
         
-        <div className="flex flex-1 overflow-auto relative">
+        <div className="flex relative">
           {/* Tactical Sidebar */}
           {sidebarOpen && (
             <div className="w-80 bg-dark-900 border-r border-dark-700 flex flex-col">
@@ -218,7 +368,7 @@ export default function HomePage() {
           
           <div className="flex-1 flex flex-col relative">
             {/* Main Map Area */}
-                <div className="flex-1 relative bg-dark-900">
+                <div className="flex-1 relative bg-dark-900 min-h-[600px]">
                   {/* Simulated Map Background */}
                   <div className="absolute inset-0 bg-gradient-to-br from-dark-800 via-dark-900 to-dark-800 z-10">
                     {/* Terrain simulation - toggleable */}
@@ -258,7 +408,7 @@ export default function HomePage() {
                     <div className="absolute top-2/3 left-2/3 w-16 h-16 border-4 border-yellow-500/80 rounded-full bg-yellow-500/20 animate-pulse shadow-lg shadow-yellow-500/30"></div>
                     
                     {/* Wind Direction Indicator */}
-                    <div className="absolute top-4 right-4">
+                    <div className="absolute top-4 left-4 z-20">
                       <div className="flex items-center gap-2 bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-dark-700">
                         <Wind className="w-4 h-4 text-tactical-400" />
                         <span className="text-xs font-mono text-tactical-300">22 mph NW</span>
@@ -266,7 +416,7 @@ export default function HomePage() {
                     </div>
                     
                     {/* Fire Status Indicator */}
-                    <div className="absolute top-4 left-4">
+                    <div className="absolute top-16 left-4 z-20">
                       <div className="flex items-center gap-2 bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-fire-500/50">
                         <div className="w-2 h-2 bg-fire-400 rounded-full animate-pulse"></div>
                         <span className="text-xs font-mono text-fire-400">ACTIVE FIRE</span>
@@ -312,7 +462,7 @@ export default function HomePage() {
                   )}
                   
                   {/* Terrain Toggle */}
-                  <div className="absolute top-4 right-4 bg-dark-800 rounded-lg p-3 border border-dark-700">
+                  <div className="absolute top-4 right-4 bg-dark-800 rounded-lg p-3 border border-dark-700 z-30">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setTerrainVisible(!terrainVisible)}
@@ -325,7 +475,7 @@ export default function HomePage() {
                         TERRAIN
                       </button>
                       <button
-                        onClick={() => setMapPoppedOut(!mapPoppedOut)}
+                        onClick={openPopupWindow}
                         className="px-3 py-1 rounded text-xs font-mono bg-tactical-500/20 border border-tactical-500/30 text-tactical-400 hover:bg-tactical-500/30 transition-all"
                       >
                         POP OUT
@@ -335,7 +485,7 @@ export default function HomePage() {
             </div>
             
             {/* Bottom Panel */}
-            <div className="h-80 border-t border-dark-700 bg-dark-900/95 backdrop-blur-sm">
+            <div className="min-h-[400px] border-t border-dark-700 bg-dark-900/95 backdrop-blur-sm">
                   {activePanel === 'status' && (
                     <div className="h-full flex flex-col">
                       <div className="px-4 py-3 border-b border-dark-700">
@@ -996,102 +1146,6 @@ export default function HomePage() {
           </div>
         </div>
         
-        {/* Pop-out Map Window */}
-        {mapPoppedOut && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
-            <div className="w-4/5 h-4/5 bg-dark-900 rounded-lg border border-dark-700 relative">
-              <div className="absolute top-4 right-4 flex gap-2">
-                <button
-                  onClick={() => setTerrainVisible(!terrainVisible)}
-                  className={`px-3 py-1 rounded text-xs font-mono transition-all ${
-                    terrainVisible 
-                      ? 'bg-tacticalGreen-500/20 border border-tacticalGreen-500/30 text-tacticalGreen-400' 
-                      : 'bg-dark-700 border border-dark-600 text-tactical-muted'
-                  }`}
-                >
-                  TERRAIN
-                </button>
-                <button
-                  onClick={() => setMapPoppedOut(false)}
-                  className="px-3 py-1 rounded text-xs font-mono bg-fire-500/20 border border-fire-500/30 text-fire-400 hover:bg-fire-500/30 transition-all"
-                >
-                  CLOSE
-                </button>
-              </div>
-              
-              {/* Pop-out Map Content */}
-              <div className="absolute inset-0 bg-gradient-to-br from-dark-800 via-dark-900 to-dark-800 rounded-lg">
-                {/* Terrain simulation - toggleable */}
-                {terrainVisible && (
-                  <div className="absolute inset-0 opacity-40">
-                    <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-green-600/50 rounded-full blur-lg"></div>
-                    <div className="absolute top-1/3 right-1/3 w-36 h-36 bg-green-500/40 rounded-full blur-lg"></div>
-                    <div className="absolute bottom-1/3 left-1/3 w-60 h-60 bg-yellow-600/40 rounded-full blur-lg"></div>
-                    <div className="absolute bottom-1/4 right-1/4 w-42 h-42 bg-orange-600/50 rounded-full blur-lg"></div>
-                  </div>
-                )}
-                
-                {/* Fire Perimeter Simulation */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                  <div className="w-40 h-40 border-4 border-red-500 rounded-full animate-pulse bg-red-500/30 shadow-lg shadow-red-500/50"></div>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-28 h-28 border-4 border-red-400 rounded-full bg-red-400/40 shadow-lg shadow-red-400/50"></div>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/70"></div>
-                </div>
-                
-                {/* Sensor Network Simulation */}
-                <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
-                <div className="absolute top-1/3 right-1/3 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
-                <div className="absolute bottom-1/3 left-1/3 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
-                <div className="absolute bottom-1/4 right-1/4 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
-                <div className="absolute top-1/2 left-1/6 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
-                <div className="absolute top-1/6 right-1/6 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
-                
-                {/* Device Locations */}
-                <div className="absolute top-1/5 left-1/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
-                <div className="absolute top-2/5 right-1/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
-                <div className="absolute bottom-1/5 left-2/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
-                <div className="absolute bottom-2/5 right-2/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
-                
-                {/* Risk Zones */}
-                <div className="absolute top-1/3 left-1/6 w-24 h-24 border-4 border-red-500/80 rounded-full bg-red-500/20 animate-pulse shadow-lg shadow-red-500/30"></div>
-                <div className="absolute bottom-1/3 right-1/6 w-20 h-20 border-4 border-orange-500/80 rounded-full bg-orange-500/20 animate-pulse shadow-lg shadow-orange-500/30"></div>
-                <div className="absolute top-2/3 left-2/3 w-16 h-16 border-4 border-yellow-500/80 rounded-full bg-yellow-500/20 animate-pulse shadow-lg shadow-yellow-500/30"></div>
-                
-                {/* Wind Direction Indicator */}
-                <div className="absolute top-4 left-4">
-                  <div className="flex items-center gap-2 bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-dark-700">
-                    <Wind className="w-4 h-4 text-tactical-400" />
-                    <span className="text-xs font-mono text-tactical-300">22 mph NW</span>
-                  </div>
-                </div>
-                
-                {/* Fire Status Indicator */}
-                <div className="absolute bottom-4 left-4">
-                  <div className="flex items-center gap-2 bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-fire-500/50">
-                    <div className="w-2 h-2 bg-fire-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-mono text-fire-400">ACTIVE FIRE</span>
-                  </div>
-                </div>
-                
-                {/* Scale Indicator */}
-                <div className="absolute bottom-4 right-4">
-                  <div className="bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-dark-700">
-                    <div className="w-16 h-1 bg-tactical-400 mb-1"></div>
-                    <span className="text-xs font-mono text-tactical-muted">1 mile</span>
-                  </div>
-                </div>
-                
-                {/* Map Title */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold text-white/80 mb-2 drop-shadow-lg">WILDFIRE OPERATIONS MAP</h2>
-                    <p className="text-sm text-white/60 font-mono">SECTOR 7 - ACTIVE FIRE DETECTED</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </QueryClientProvider>
   )
