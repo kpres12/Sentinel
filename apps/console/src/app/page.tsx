@@ -23,16 +23,21 @@ import {
   X,
   Layers
 } from 'lucide-react'
+import { AlertsPanel } from '../components/panels/AlertsPanel'
+import { DevicesPanel } from '../components/panels/DevicesPanel'
+import { MissionsPanel } from '../components/panels/MissionsPanel'
+import { useSummitConnection } from '../hooks/useSummit'
 
 const queryClient = new QueryClient()
 
-export default function HomePage() {
+function HomePageContent() {
   const [activePanel, setActivePanel] = useState<string>('status')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [overlayVisible, setOverlayVisible] = useState(false)
   const [terrainVisible, setTerrainVisible] = useState(true)
   const [mapPoppedOut, setMapPoppedOut] = useState(false)
   const [popupWindow, setPopupWindow] = useState<Window | null>(null)
+  const { isConnected } = useSummitConnection()
 
   const openPopupWindow = () => {
     const popup = window.open('', 'mapPopup', 'width=1200,height=800,resizable=yes,scrollbars=yes,status=yes')
@@ -210,8 +215,10 @@ export default function HomePage() {
             {/* Center Section - Status Indicators */}
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
-                <Wifi className="w-4 h-4 text-tacticalGreen-400" />
-                <span className="text-sm font-mono text-tactical-300">ONLINE</span>
+                <Wifi className={`w-4 h-4 ${isConnected ? 'text-tacticalGreen-400' : 'text-fire-400'}`} />
+                <span className="text-sm font-mono text-tactical-300">
+                  {isConnected ? 'SUMMIT.OS ONLINE' : 'SUMMIT.OS OFFLINE'}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Battery className="w-4 h-4 text-tacticalGreen-400" />
@@ -555,96 +562,9 @@ export default function HomePage() {
                 </div>
               )}
               
-                  {activePanel === 'alerts' && (
-                    <div className="h-full flex flex-col">
-                      <div className="px-4 py-3 border-b border-dark-700">
-                        <h2 className="text-lg font-bold text-tactical-400">ALERT CENTER</h2>
-                      </div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    <div className="bg-dark-800 p-4 rounded-lg border-l-4 border-fire-500 bg-fire-500/10">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h3 className="font-mono text-sm text-tactical-300 mb-1">ACTIVE FIRE DETECTED</h3>
-                          <p className="text-xs text-tactical-muted font-mono mb-1">SECTOR 7 - SPREADING RAPIDLY</p>
-                          <p className="text-xs font-mono text-tactical-muted">PRIORITY 1 - IMMEDIATE RESPONSE</p>
-                        </div>
-                        <AlertTriangle className="w-4 h-4 text-fire-400 animate-pulse" />
-                      </div>
-                      <div className="flex items-center gap-2 text-xs font-mono text-tactical-muted">
-                        <Clock className="w-3 h-3" />
-                        <span>14:32:15</span>
-                        <span>•</span>
-                        <span>Size: 2.3 acres</span>
-                        <span>•</span>
-                        <span>Rate: 0.4 mph</span>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-dark-800 p-4 rounded-lg border-l-4 border-warning-500 bg-warning-500/10">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h3 className="font-mono text-sm text-tactical-300 mb-1">ELEVATED FIRE RISK</h3>
-                          <p className="text-xs text-tactical-muted font-mono mb-1">SECTOR 3 - HIGH WIND CONDITIONS</p>
-                          <p className="text-xs font-mono text-tactical-muted">PRIORITY 2 - MONITOR CLOSELY</p>
-                        </div>
-                        <AlertTriangle className="w-4 h-4 text-warning-400" />
-                      </div>
-                      <div className="flex items-center gap-2 text-xs font-mono text-tactical-muted">
-                        <Clock className="w-3 h-3" />
-                        <span>13:45:22</span>
-                        <span>•</span>
-                        <span>Wind: 18 mph NW</span>
-                        <span>•</span>
-                        <span>Humidity: 22%</span>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-dark-800 p-4 rounded-lg border-l-4 border-tactical-500 bg-tactical-500/10">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h3 className="font-mono text-sm text-tactical-300 mb-1">SENSOR OFFLINE</h3>
-                          <p className="text-xs text-tactical-muted font-mono mb-1">HEAT SENSOR #23 - COMMUNICATION LOST</p>
-                          <p className="text-xs font-mono text-tactical-muted">PRIORITY 3 - MAINTENANCE REQUIRED</p>
-                        </div>
-                        <AlertTriangle className="w-4 h-4 text-tactical-400" />
-                      </div>
-                      <div className="flex items-center gap-2 text-xs font-mono text-tactical-muted">
-                        <Clock className="w-3 h-3" />
-                        <span>12:15:08</span>
-                        <span>•</span>
-                        <span>Last seen: 2h ago</span>
-                        <span>•</span>
-                        <span>Location: 40.123°N, 120.456°W</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+                  {activePanel === 'alerts' && <AlertsPanel />}
               
-                  {activePanel === 'devices' && (
-                    <div className="h-full flex flex-col">
-                      <div className="px-4 py-3 border-b border-dark-700">
-                        <h2 className="text-lg font-bold text-tactical-400">DEVICE FLEET</h2>
-                      </div>
-                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                        <div className="bg-dark-800 p-4 rounded-lg border border-tacticalGreen-500/30 bg-tacticalGreen-500/20">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-3 h-3 rounded-full bg-tacticalGreen-400 animate-pulse" />
-                              <div>
-                                <p className="font-mono text-sm text-tactical-300">FIRELINE ALPHA</p>
-                                <p className="text-xs text-tactical-muted font-mono">40.000°N, 120.000°W</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-mono text-tactical-300">87%</p>
-                              <p className="text-xs text-tactical-muted font-mono">ONLINE</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {activePanel === 'devices' && <DevicesPanel />}
                   
                   {activePanel === 'risk' && (
                     <div className="h-full flex flex-col">
@@ -974,75 +894,7 @@ export default function HomePage() {
                     </div>
                   )}
                   
-                  {activePanel === 'missions' && (
-                    <div className="h-full flex flex-col">
-                      <div className="px-4 py-3 border-b border-dark-700">
-                        <h2 className="text-lg font-bold text-tactical-400">ACTIVE MISSIONS</h2>
-                      </div>
-                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                        <div className="bg-dark-800 p-4 rounded-lg border border-fire-500/30 bg-fire-500/20">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Flame className="w-4 h-4 text-fire-400" />
-                            <span className="text-sm font-mono text-tactical-300">MISSION ALPHA-7</span>
-                          </div>
-                          <div className="text-sm font-mono text-fire-400">FIRE SUPPRESSION - SECTOR 7</div>
-                          <div className="text-xs text-tactical-muted">Status: IN PROGRESS | ETA: 6 min | Progress: 45%</div>
-                          <div className="mt-2 w-full bg-dark-700 rounded-full h-1">
-                            <div className="bg-fire-400 h-1 rounded-full" style={{width: '45%'}}></div>
-                          </div>
-                        </div>
-                        
-                        <div className="bg-dark-800 p-4 rounded-lg border border-tacticalGreen-500/30 bg-tacticalGreen-500/20">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Eye className="w-4 h-4 text-tacticalGreen-400" />
-                            <span className="text-sm font-mono text-tactical-300">MISSION BRAVO-3</span>
-                          </div>
-                          <div className="text-sm font-mono text-tacticalGreen-400">SURVEILLANCE - SECTOR 3</div>
-                          <div className="text-xs text-tactical-muted">Status: ACTIVE | ETA: 12 min | Coverage: 78%</div>
-                          <div className="mt-2 w-full bg-dark-700 rounded-full h-1">
-                            <div className="bg-tacticalGreen-400 h-1 rounded-full" style={{width: '78%'}}></div>
-                          </div>
-                        </div>
-                        
-                        <div className="bg-dark-800 p-4 rounded-lg border border-tactical-500/30 bg-tactical-500/20">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Radio className="w-4 h-4 text-tactical-400" />
-                            <span className="text-sm font-mono text-tactical-300">MISSION CHARLIE-1</span>
-                          </div>
-                          <div className="text-sm font-mono text-tactical-400">PATROL - SECTOR 1</div>
-                          <div className="text-xs text-tactical-muted">Status: STANDBY | ETA: 15 min | Ready: YES</div>
-                          <div className="mt-2 w-full bg-dark-700 rounded-full h-1">
-                            <div className="bg-tactical-400 h-1 rounded-full" style={{width: '0%'}}></div>
-                          </div>
-                        </div>
-                        
-                        <div className="bg-dark-800 p-4 rounded-lg">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Activity className="w-4 h-4 text-tactical-400" />
-                            <span className="text-sm font-mono text-tactical-300">MISSION SUMMARY</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <p className="text-xs text-tactical-muted font-mono">ACTIVE</p>
-                              <p className="text-lg font-mono text-tacticalGreen-400">2</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-tactical-muted font-mono">STANDBY</p>
-                              <p className="text-lg font-mono text-tactical-400">1</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-tactical-muted font-mono">COMPLETED</p>
-                              <p className="text-lg font-mono text-tactical-400">5</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-tactical-muted font-mono">SUCCESS RATE</p>
-                              <p className="text-lg font-mono text-tacticalGreen-400">94%</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {activePanel === 'missions' && <MissionsPanel />}
                   
                   {activePanel === 'intelligence' && (
                     <div className="h-full flex flex-col">
@@ -1147,6 +999,14 @@ export default function HomePage() {
         </div>
         
       </div>
+    </QueryClientProvider>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <HomePageContent />
     </QueryClientProvider>
   )
 }
