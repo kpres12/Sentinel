@@ -365,4 +365,4 @@ Apache-2.0 License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-**Built with ❤️ for wildfire responders worldwide**
+**Built with ❤️ by BigMt.Ai**

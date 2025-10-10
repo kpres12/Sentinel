@@ -10,11 +10,7 @@
     "type-check": "tsc --noEmit",
     "test": "jest"
   },
-  "dependencies": {
-    "numpy": "^1.24.0",
-    "scipy": "^1.11.0",
-    "sklearn": "^0.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^20.10.0",
