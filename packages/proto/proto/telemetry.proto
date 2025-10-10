@@ -1,0 +1,130 @@
+syntax = "proto3";
+
+package bigmt.telemetry;
+
+import "google/protobuf/timestamp.proto";
+
+// Sensor reading from a device
+message Sensor {
+  string name = 1;
+  string unit = 2;
+  double value = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// Telemetry data from robots/drones
+message Telemetry {
+  string device_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  double latitude = 3;
+  double longitude = 4;
+  float altitude = 5;
+  float yaw = 6;
+  float pitch = 7;
+  float roll = 8;
+  float speed = 9;
+  float battery_level = 10;
+  repeated Sensor sensors = 11;
+  string status = 12; // online, offline, error
+  float comms_rssi = 13;
+  float temperature = 14;
+}
+
+// Detection from edge or cloud processing
+message Detection {
+  string device_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  DetectionType type = 3;
+  optional double latitude = 4;
+  optional double longitude = 5;
+  optional float bearing = 6;
+  float confidence = 7;
+  string media_ref = 8; // reference to video/image
+  string source = 9; // edge, cloud
+  map<string, string> metadata = 10;
+}
+
+enum DetectionType {
+  DETECTION_TYPE_UNSPECIFIED = 0;
+  DETECTION_TYPE_SMOKE = 1;
+  DETECTION_TYPE_FLAME = 2;
+  DETECTION_TYPE_HEAT = 3;
+}
+
+// Task assignment to devices
+message Task {
+  string task_id = 1;
+  string device_id = 2;
+  TaskKind kind = 3;
+  repeated Point waypoints = 4;
+  map<string, string> parameters = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp deadline = 7;
+  TaskStatus status = 8;
+  string assigned_by = 9;
+}
+
+enum TaskKind {
+  TASK_KIND_UNSPECIFIED = 0;
+  TASK_KIND_PATROL = 1;
+  TASK_KIND_HOLD = 2;
+  TASK_KIND_BUILD_LINE = 3;
+  TASK_KIND_SURVEY_SMOKE = 4;
+  TASK_KIND_EMERGENCY_RETURN = 5;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_PENDING = 1;
+  TASK_STATUS_IN_PROGRESS = 2;
+  TASK_STATUS_COMPLETED = 3;
+  TASK_STATUS_FAILED = 4;
+  TASK_STATUS_CANCELLED = 5;
+}
+
+// Geographic point
+message Point {
+  double latitude = 1;
+  double longitude = 2;
+  float altitude = 3;
+}
+
+// Alert/notification
+message Alert {
+  string alert_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  AlertType type = 3;
+  AlertSeverity severity = 4;
+  string message = 5;
+  Point location = 6;
+  string device_id = 7;
+  string detection_id = 8;
+  AlertStatus status = 9;
+  string acknowledged_by = 10;
+  google.protobuf.Timestamp acknowledged_at = 11;
+}
+
+enum AlertType {
+  ALERT_TYPE_UNSPECIFIED = 0;
+  ALERT_TYPE_SMOKE_DETECTED = 1;
+  ALERT_TYPE_FIRE_DETECTED = 2;
+  ALERT_TYPE_DEVICE_OFFLINE = 3;
+  ALERT_TYPE_LOW_BATTERY = 4;
+  ALERT_TYPE_COMMS_LOST = 5;
+  ALERT_TYPE_EMERGENCY = 6;
+}
+
+enum AlertSeverity {
+  ALERT_SEVERITY_UNSPECIFIED = 0;
+  ALERT_SEVERITY_LOW = 1;
+  ALERT_SEVERITY_MEDIUM = 2;
+  ALERT_SEVERITY_HIGH = 3;
+  ALERT_SEVERITY_CRITICAL = 4;
+}
+
+enum AlertStatus {
+  ALERT_STATUS_UNSPECIFIED = 0;
+  ALERT_STATUS_ACTIVE = 1;
+  ALERT_STATUS_ACKNOWLEDGED = 2;
+  ALERT_STATUS_RESOLVED = 3;
+}

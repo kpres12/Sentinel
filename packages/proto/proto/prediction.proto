@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package bigmt.prediction;
+
+import "google/protobuf/timestamp.proto";
+
+// Environmental conditions for modeling
+message EnvironmentalConditions {
+  google.protobuf.Timestamp timestamp = 1;
+  double latitude = 2;
+  double longitude = 3;
+  float temperature_c = 4;
+  float relative_humidity = 5; // 0-100%
+  float wind_speed_mps = 6;
+  float wind_direction_deg = 7; // degrees from north
+  float fuel_moisture = 8;      // 0-1
+  float soil_moisture = 9;      // 0-1
+  int32 fuel_model = 10;        // Anderson 13 fuel model
+  float slope_deg = 11;
+  float aspect_deg = 12;
+  float canopy_cover = 13;      // 0-1
+  float elevation_m = 14;
+}
+
+// Fire spread prediction parameters
+message SpreadParameters {
+  repeated Point ignition_points = 1;
+  EnvironmentalConditions conditions = 2;
+  repeated FireLine fire_lines = 3;
+  int32 simulation_hours = 4;
+  float time_step_minutes = 5;
+  int32 monte_carlo_runs = 6;
+  map<string, float> custom_parameters = 7;
+}
+
+// Fire line geometry
+message FireLine {
+  string line_id = 1;
+  repeated Point geometry = 2;
+  float width_meters = 3;
+  FireLineType type = 4;
+  FireLineStatus status = 5;
+  float effectiveness = 6; // 0-1
+}
+
+enum FireLineType {
+  FIRE_LINE_TYPE_UNSPECIFIED = 0;
+  FIRE_LINE_TYPE_DOZER = 1;
+  FIRE_LINE_TYPE_HAND = 2;
+  FIRE_LINE_TYPE_WET_LINE = 3;
+  FIRE_LINE_TYPE_BACKFIRE = 4;
+}
+
+enum FireLineStatus {
+  FIRE_LINE_STATUS_UNSPECIFIED = 0;
+  FIRE_LINE_STATUS_PLANNED = 1;
+  FIRE_LINE_STATUS_UNDER_CONSTRUCTION = 2;
+  FIRE_LINE_STATUS_COMPLETED = 3;
+  FIRE_LINE_STATUS_BREACHED = 4;
+}
+
+// Geographic point
+message Point {
+  double latitude = 1;
+  double longitude = 2;
+  float altitude = 3;
+}
+
+// Spread simulation result
+message SpreadResult {
+  string simulation_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  repeated Isochrone isochrones = 3;
+  repeated Point perimeter = 4;
+  float total_area_hectares = 5;
+  float max_spread_rate_mph = 6;
+  float simulation_duration_hours = 7;
+  map<string, float> statistics = 8;
+  SpreadConfidence confidence = 9;
+}
+
+// Isochrone (time contour)
+message Isochrone {
+  int32 hours_from_start = 1;
+  repeated Point geometry = 2;
+  float area_hectares = 3;
+  float perimeter_km = 4;
+}
+
+// Confidence assessment
+message SpreadConfidence {
+  float overall_confidence = 1; // 0-1
+  float weather_confidence = 2;
+  float fuel_confidence = 3;
+  float terrain_confidence = 4;
+  string confidence_factors = 5; // description of limiting factors
+}
+
+// What-if scenario request
+message WhatIfRequest {
+  string base_simulation_id = 1;
+  repeated ScenarioModification modifications = 2;
+  string scenario_name = 3;
+  string created_by = 4;
+}
+
+// Scenario modification
+message ScenarioModification {
+  ScenarioModificationType type = 1;
+  map<string, float> parameters = 2;
+  string description = 3;
+}
+
+enum ScenarioModificationType {
+  SCENARIO_MODIFICATION_TYPE_UNSPECIFIED = 0;
+  SCENARIO_MODIFICATION_TYPE_WIND_CHANGE = 1;
+  SCENARIO_MODIFICATION_TYPE_HUMIDITY_CHANGE = 2;
+  SCENARIO_MODIFICATION_TYPE_FUEL_MOISTURE_CHANGE = 3;
+  SCENARIO_MODIFICATION_TYPE_ADD_FIRE_LINE = 4;
+  SCENARIO_MODIFICATION_TYPE_REMOVE_FIRE_LINE = 5;
+  SCENARIO_MODIFICATION_TYPE_IGNITION_POINT_CHANGE = 6;
+}
+
+// What-if scenario result
+message WhatIfResult {
+  string scenario_id = 1;
+  string base_simulation_id = 2;
+  string scenario_name = 3;
+  google.protobuf.Timestamp created_at = 4;
+  string created_by = 5;
+  repeated ScenarioModification modifications = 6;
+  SpreadResult result = 7;
+  ScenarioComparison comparison = 8;
+}
+
+// Comparison between scenarios
+message ScenarioComparison {
+  float area_difference_hectares = 1;
+  float perimeter_difference_km = 2;
+  float max_spread_rate_difference_mph = 3;
+  float confidence_change = 4;
+  string summary = 5;
+}

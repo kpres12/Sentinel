@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with PostGIS
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: wildfire-postgres
+    environment:
+      POSTGRES_DB: wildfire_ops
+      POSTGRES_USER: wildfire
+      POSTGRES_PASSWORD: wildfire123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wildfire -d wildfire_ops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: wildfire-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MQTT Broker (EMQX)
+  emqx:
+    image: emqx/emqx:5.3.0
+    container_name: wildfire-emqx
+    environment:
+      EMQX_NAME: wildfire-emqx
+      EMQX_HOST: localhost
+      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: admin123
+    ports:
+      - "1883:1883"
+      - "8083:8083"
+      - "8084:8084"
+      - "18083:18083"
+    volumes:
+      - emqx_data:/opt/emqx/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18083/api/v5/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway
+  apigw:
+    build:
+      context: ../../apps/apigw
+      dockerfile: Dockerfile
+    container_name: wildfire-apigw
+    environment:
+      DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MQTT_BROKER: emqx
+      MQTT_PORT: 1883
+    ports:
+      - "8000:8000"
+      - "50051:50051"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+    volumes:
+      - ../../apps/apigw:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Console (Next.js)
+  console:
+    build:
+      context: ../../apps/console
+      dockerfile: Dockerfile
+    container_name: wildfire-console
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_MQTT_WS_URL: ws://localhost:8083/mqtt
+    ports:
+      - "3000:3000"
+    depends_on:
+      - apigw
+    volumes:
+      - ../../apps/console:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # Edge Agent (Mock)
+  edge-agent:
+    build:
+      context: ../../apps/edge-agent
+      dockerfile: Dockerfile
+    container_name: wildfire-edge-agent
+    environment:
+      MQTT_BROKER: emqx
+      MQTT_PORT: 1883
+      DEVICE_ID: edge-device-001
+    depends_on:
+      emqx:
+        condition: service_healthy
+    volumes:
+      - ../../apps/edge-agent:/app
+
+  # Fusion Service
+  fusion:
+    build:
+      context: ../../apps/fusion
+      dockerfile: Dockerfile
+    container_name: wildfire-fusion
+    environment:
+      DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../../apps/fusion:/app
+
+  # Triangulation Service
+  triangulate:
+    build:
+      context: ../../apps/triangulate
+      dockerfile: Dockerfile
+    container_name: wildfire-triangulate
+    environment:
+      DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../../apps/triangulate:/app
+
+  # Prediction Service
+  predict:
+    build:
+      context: ../../apps/predict
+      dockerfile: Dockerfile
+    container_name: wildfire-predict
+    environment:
+      DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../../apps/predict:/app
+
+volumes:
+  postgres_data:
+  redis_data:
+  emqx_data:

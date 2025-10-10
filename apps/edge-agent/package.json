@@ -1,0 +1,25 @@
+{
+  "name": "@bigmt/edge-agent",
+  "version": "1.0.0",
+  "description": "Edge agent for wildfire operations platform",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "paho-mqtt": "^1.1.0",
+    "axios": "^1.6.0",
+    "winston": "^3.11.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/paho-mqtt": "^1.1.0",
+    "@types/node-cron": "^3.0.11",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  }
+}
