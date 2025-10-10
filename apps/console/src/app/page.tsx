@@ -46,15 +46,14 @@ export default function HomePage() {
                 {sidebarOpen ? <X className="w-5 h-5 text-tactical-400" /> : <Menu className="w-5 h-5 text-tactical-400" />}
               </button>
               
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-tactical-600 rounded-md flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-white" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-tactical-600 rounded-md flex items-center justify-center">
+                    <Flame className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-bold text-tactical-400">WILDFIRE OPS</h1>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="tactical-title text-lg">WILDFIRE OPS</h1>
-                  <p className="text-xs text-tactical-muted font-mono">TACTICAL COMMAND</p>
-                </div>
-              </div>
             </div>
 
             {/* Center Section - Status Indicators */}
@@ -77,10 +76,14 @@ export default function HomePage() {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <div className="tactical-subtitle text-lg font-mono">
-                  {new Date().toLocaleTimeString('en-US', { hour12: false })}
+                  <span suppressHydrationWarning>
+                    {new Date().toLocaleTimeString('en-US', { hour12: false })}
+                  </span>
                 </div>
                 <div className="text-xs text-tactical-muted font-mono">
-                  {new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                  <span suppressHydrationWarning>
+                    {new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                  </span>
                 </div>
               </div>
               <button className="relative p-2 rounded-md hover:bg-dark-700 transition-colors">
@@ -104,8 +107,7 @@ export default function HomePage() {
           {sidebarOpen && (
             <div className="w-80 bg-dark-900 border-r border-dark-700 flex flex-col">
               <div className="p-4 border-b border-dark-700">
-                <h2 className="tactical-title text-lg">TACTICAL MENU</h2>
-                <p className="text-xs text-tactical-muted font-mono">WILDFIRE OPS COMMAND</p>
+                <h2 className="text-lg font-bold text-tactical-400">MENU</h2>
               </div>
 
               <div className="flex-1 p-4 space-y-2">
@@ -139,27 +141,122 @@ export default function HomePage() {
                   <Plane className="w-5 h-5 text-tactical-400" />
                   <span className="text-sm font-mono text-tactical-300">DEVICES</span>
                 </button>
+                <button
+                  onClick={() => setActivePanel('risk')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'risk' ? 'bg-warning-500/20 border border-warning-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Flame className="w-5 h-5 text-warning-400" />
+                  <span className="text-sm font-mono text-tactical-300">RISK MODEL</span>
+                </button>
+                <button
+                  onClick={() => setActivePanel('weather')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'weather' ? 'bg-tactical-500/20 border border-tactical-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Wind className="w-5 h-5 text-tactical-400" />
+                  <span className="text-sm font-mono text-tactical-300">WEATHER</span>
+                </button>
+                <button
+                  onClick={() => setActivePanel('sensors')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'sensors' ? 'bg-tacticalGreen-500/20 border border-tacticalGreen-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Eye className="w-5 h-5 text-tacticalGreen-400" />
+                  <span className="text-sm font-mono text-tactical-300">SENSORS</span>
+                </button>
+                <button
+                  onClick={() => setActivePanel('prediction')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'prediction' ? 'bg-fire-500/20 border border-fire-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Target className="w-5 h-5 text-fire-400" />
+                  <span className="text-sm font-mono text-tactical-300">SPREAD MODEL</span>
+                </button>
               </div>
             </div>
           )}
           
           <div className="flex-1 flex flex-col relative">
             {/* Main Map Area */}
-            <div className="flex-1 relative bg-dark-900">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-32 h-32 bg-tactical-600 rounded-full flex items-center justify-center mb-6 mx-auto animate-pulse">
-                    <span className="text-4xl">🗺️</span>
+                <div className="flex-1 relative bg-dark-900">
+                  {/* Simulated Map Background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-dark-800 via-dark-900 to-dark-800 z-10">
+                    {/* Terrain simulation - more visible */}
+                    <div className="absolute inset-0 opacity-40">
+                      <div className="absolute top-1/4 left-1/4 w-48 h-48 bg-green-600/50 rounded-full blur-lg"></div>
+                      <div className="absolute top-1/3 right-1/3 w-36 h-36 bg-green-500/40 rounded-full blur-lg"></div>
+                      <div className="absolute bottom-1/3 left-1/3 w-60 h-60 bg-yellow-600/40 rounded-full blur-lg"></div>
+                      <div className="absolute bottom-1/4 right-1/4 w-42 h-42 bg-orange-600/50 rounded-full blur-lg"></div>
+                    </div>
+                    
+                    {/* Fire Perimeter Simulation - much more visible */}
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                      <div className="w-40 h-40 border-4 border-red-500 rounded-full animate-pulse bg-red-500/30 shadow-lg shadow-red-500/50"></div>
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-28 h-28 border-4 border-red-400 rounded-full bg-red-400/40 shadow-lg shadow-red-400/50"></div>
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/70"></div>
+                    </div>
+                    
+                    {/* Sensor Network Simulation - larger and more visible */}
+                    <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                    <div className="absolute top-1/3 right-1/3 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                    <div className="absolute bottom-1/3 left-1/3 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                    <div className="absolute bottom-1/4 right-1/4 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                    <div className="absolute top-1/2 left-1/6 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                    <div className="absolute top-1/6 right-1/6 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                    
+                    {/* Device Locations - larger and more visible */}
+                    <div className="absolute top-1/5 left-1/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                    <div className="absolute top-2/5 right-1/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                    <div className="absolute bottom-1/5 left-2/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                    <div className="absolute bottom-2/5 right-2/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                    
+                    {/* Risk Zones - much more visible */}
+                    <div className="absolute top-1/3 left-1/6 w-24 h-24 border-4 border-red-500/80 rounded-full bg-red-500/20 animate-pulse shadow-lg shadow-red-500/30"></div>
+                    <div className="absolute bottom-1/3 right-1/6 w-20 h-20 border-4 border-orange-500/80 rounded-full bg-orange-500/20 animate-pulse shadow-lg shadow-orange-500/30"></div>
+                    <div className="absolute top-2/3 left-2/3 w-16 h-16 border-4 border-yellow-500/80 rounded-full bg-yellow-500/20 animate-pulse shadow-lg shadow-yellow-500/30"></div>
+                    
+                    {/* Wind Direction Indicator */}
+                    <div className="absolute top-4 right-4">
+                      <div className="flex items-center gap-2 bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-dark-700">
+                        <Wind className="w-4 h-4 text-tactical-400" />
+                        <span className="text-xs font-mono text-tactical-300">22 mph NW</span>
+                      </div>
+                    </div>
+                    
+                    {/* Fire Status Indicator */}
+                    <div className="absolute top-4 left-4">
+                      <div className="flex items-center gap-2 bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-fire-500/50">
+                        <div className="w-2 h-2 bg-fire-400 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-mono text-fire-400">ACTIVE FIRE</span>
+                      </div>
+                    </div>
+                    
+                    {/* Scale Indicator */}
+                    <div className="absolute bottom-4 left-4">
+                      <div className="bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-dark-700">
+                        <div className="w-16 h-1 bg-tactical-400 mb-1"></div>
+                        <span className="text-xs font-mono text-tactical-muted">1 mile</span>
+                      </div>
+                    </div>
+                    
+                    {/* Map Title */}
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                      <div className="text-center">
+                        <h2 className="text-2xl font-bold text-white/80 mb-2 drop-shadow-lg">WILDFIRE OPERATIONS MAP</h2>
+                        <p className="text-sm text-white/60 font-mono">SECTOR 7 - ACTIVE FIRE DETECTED</p>
+                      </div>
+                    </div>
                   </div>
-                  <h2 className="tactical-subtitle text-2xl mb-4">TACTICAL MAP</h2>
-                  <p className="text-tactical-300 mb-8">MapLibre GL integration ready</p>
-                </div>
-              </div>
               
-              {/* Tactical Overlay */}
-              {overlayVisible && (
-                <div className="absolute top-4 left-4 tactical-panel rounded-lg p-4">
-                  <h3 className="tactical-subtitle mb-3">TACTICAL TOOLS</h3>
+                  {/* Map Overlay */}
+                  {overlayVisible && (
+                    <div className="absolute top-4 left-4 bg-dark-800 rounded-lg p-4 border border-dark-700">
+                      <h3 className="text-sm font-bold text-tactical-400 mb-3">MAP TOOLS</h3>
                   <div className="grid grid-cols-3 gap-2">
                     <button className="flex flex-col items-center gap-1 p-2 rounded hover:bg-dark-700 transition-all">
                       <Target className="w-4 h-4 text-fire-400" />
@@ -180,85 +277,413 @@ export default function HomePage() {
             
             {/* Bottom Panel */}
             <div className="h-80 border-t border-dark-700 bg-dark-900/95 backdrop-blur-sm">
-              {activePanel === 'status' && (
-                <div className="h-full flex flex-col">
-                  <div className="tactical-header px-4 py-3 border-b border-dark-700">
-                    <h2 className="tactical-title text-lg">SYSTEM STATUS</h2>
-                    <p className="text-xs text-tactical-muted font-mono">WILDFIRE OPS COMMAND</p>
-                  </div>
+                  {activePanel === 'status' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">SYSTEM STATUS</h2>
+                      </div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="tactical-panel p-3 rounded-lg">
+                      <div className="bg-dark-800 p-3 rounded-lg border border-dark-700">
                         <div className="flex items-center gap-2 mb-2">
                           <Plane className="w-4 h-4 text-tacticalGreen-400" />
                           <span className="text-xs font-mono text-tactical-300">FIRELINE ALPHA</span>
                         </div>
                         <div className="text-sm font-mono text-tacticalGreen-400">ONLINE</div>
-                        <div className="text-xs text-tactical-muted">Battery: 87%</div>
+                        <div className="text-xs text-tactical-muted">Battery: 87% | Speed: 12 mph</div>
+                        <div className="text-xs text-tactical-muted">Location: 40.123°N, 120.456°W</div>
                       </div>
-                      <div className="tactical-panel p-3 rounded-lg">
+                      <div className="bg-dark-800 p-3 rounded-lg border border-dark-700">
                         <div className="flex items-center gap-2 mb-2">
                           <Plane className="w-4 h-4 text-tacticalGreen-400" />
                           <span className="text-xs font-mono text-tactical-300">SURVEILLANCE BRAVO</span>
                         </div>
                         <div className="text-sm font-mono text-tacticalGreen-400">ONLINE</div>
-                        <div className="text-xs text-tactical-muted">Battery: 92%</div>
+                        <div className="text-xs text-tactical-muted">Battery: 92% | Altitude: 1,200 ft</div>
+                        <div className="text-xs text-tactical-muted">Location: 40.089°N, 120.234°W</div>
+                      </div>
+                      <div className="bg-dark-800 p-3 rounded-lg border border-dark-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Plane className="w-4 h-4 text-tacticalGreen-400" />
+                          <span className="text-xs font-mono text-tactical-300">PATROL CHARLIE</span>
+                        </div>
+                        <div className="text-sm font-mono text-tacticalGreen-400">ONLINE</div>
+                        <div className="text-xs text-tactical-muted">Battery: 78% | Speed: 8 mph</div>
+                        <div className="text-xs text-tactical-muted">Location: 40.156°N, 120.345°W</div>
+                      </div>
+                      <div className="bg-dark-800 p-3 rounded-lg border border-dark-700">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Plane className="w-4 h-4 text-tacticalGreen-400" />
+                          <span className="text-xs font-mono text-tactical-300">RESCUE DELTA</span>
+                        </div>
+                        <div className="text-sm font-mono text-tacticalGreen-400">ONLINE</div>
+                        <div className="text-xs text-tactical-muted">Battery: 95% | Altitude: 800 ft</div>
+                        <div className="text-xs text-tactical-muted">Location: 40.067°N, 120.178°W</div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg border border-dark-700">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Activity className="w-4 h-4 text-tactical-400" />
+                        <span className="text-sm font-mono text-tactical-300">SYSTEM METRICS</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">TOTAL DEVICES</p>
+                          <p className="text-lg font-mono text-tacticalGreen-400">12</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">ONLINE</p>
+                          <p className="text-lg font-mono text-tacticalGreen-400">11</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">COVERAGE</p>
+                          <p className="text-lg font-mono text-tactical-400">94%</p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
               
-              {activePanel === 'alerts' && (
-                <div className="h-full flex flex-col">
-                  <div className="tactical-header px-4 py-3 border-b border-dark-700">
-                    <h2 className="tactical-title text-lg">ALERT CENTER</h2>
-                    <p className="text-xs text-tactical-muted font-mono">WILDFIRE OPS COMMAND</p>
-                  </div>
+                  {activePanel === 'alerts' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">ALERT CENTER</h2>
+                      </div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    <div className="tactical-panel p-4 rounded-lg border-l-4 border-fire-500 bg-fire-500/10">
+                    <div className="bg-dark-800 p-4 rounded-lg border-l-4 border-fire-500 bg-fire-500/10">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
-                          <h3 className="font-mono text-sm text-tactical-300 mb-1">HIGH FIRE RISK DETECTED</h3>
-                          <p className="text-xs text-tactical-muted font-mono mb-1">SECTOR 7 - IMMEDIATE ACTION REQUIRED</p>
-                          <p className="text-xs font-mono text-tactical-muted">PRIORITY 1</p>
+                          <h3 className="font-mono text-sm text-tactical-300 mb-1">ACTIVE FIRE DETECTED</h3>
+                          <p className="text-xs text-tactical-muted font-mono mb-1">SECTOR 7 - SPREADING RAPIDLY</p>
+                          <p className="text-xs font-mono text-tactical-muted">PRIORITY 1 - IMMEDIATE RESPONSE</p>
                         </div>
                         <AlertTriangle className="w-4 h-4 text-fire-400 animate-pulse" />
                       </div>
                       <div className="flex items-center gap-2 text-xs font-mono text-tactical-muted">
                         <Clock className="w-3 h-3" />
                         <span>14:32:15</span>
+                        <span>•</span>
+                        <span>Size: 2.3 acres</span>
+                        <span>•</span>
+                        <span>Rate: 0.4 mph</span>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg border-l-4 border-warning-500 bg-warning-500/10">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h3 className="font-mono text-sm text-tactical-300 mb-1">ELEVATED FIRE RISK</h3>
+                          <p className="text-xs text-tactical-muted font-mono mb-1">SECTOR 3 - HIGH WIND CONDITIONS</p>
+                          <p className="text-xs font-mono text-tactical-muted">PRIORITY 2 - MONITOR CLOSELY</p>
+                        </div>
+                        <AlertTriangle className="w-4 h-4 text-warning-400" />
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-mono text-tactical-muted">
+                        <Clock className="w-3 h-3" />
+                        <span>13:45:22</span>
+                        <span>•</span>
+                        <span>Wind: 18 mph NW</span>
+                        <span>•</span>
+                        <span>Humidity: 22%</span>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg border-l-4 border-tactical-500 bg-tactical-500/10">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h3 className="font-mono text-sm text-tactical-300 mb-1">SENSOR OFFLINE</h3>
+                          <p className="text-xs text-tactical-muted font-mono mb-1">HEAT SENSOR #23 - COMMUNICATION LOST</p>
+                          <p className="text-xs font-mono text-tactical-muted">PRIORITY 3 - MAINTENANCE REQUIRED</p>
+                        </div>
+                        <AlertTriangle className="w-4 h-4 text-tactical-400" />
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-mono text-tactical-muted">
+                        <Clock className="w-3 h-3" />
+                        <span>12:15:08</span>
+                        <span>•</span>
+                        <span>Last seen: 2h ago</span>
+                        <span>•</span>
+                        <span>Location: 40.123°N, 120.456°W</span>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
               
-              {activePanel === 'devices' && (
-                <div className="h-full flex flex-col">
-                  <div className="tactical-header px-4 py-3 border-b border-dark-700">
-                    <h2 className="tactical-title text-lg">DEVICE FLEET</h2>
-                    <p className="text-xs text-tactical-muted font-mono">WILDFIRE OPS COMMAND</p>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    <div className="tactical-panel p-4 rounded-lg border border-tacticalGreen-500/30 bg-tacticalGreen-500/20">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-3 h-3 rounded-full bg-tacticalGreen-400 animate-pulse" />
-                          <div>
-                            <p className="font-mono text-sm text-tactical-300">FIRELINE ALPHA</p>
-                            <p className="text-xs text-tactical-muted font-mono">40.000°N, 120.000°W</p>
+                  {activePanel === 'devices' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">DEVICE FLEET</h2>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="bg-dark-800 p-4 rounded-lg border border-tacticalGreen-500/30 bg-tacticalGreen-500/20">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-3 h-3 rounded-full bg-tacticalGreen-400 animate-pulse" />
+                              <div>
+                                <p className="font-mono text-sm text-tactical-300">FIRELINE ALPHA</p>
+                                <p className="text-xs text-tactical-muted font-mono">40.000°N, 120.000°W</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-mono text-tactical-300">87%</p>
+                              <p className="text-xs text-tactical-muted font-mono">ONLINE</p>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-mono text-tactical-300">87%</p>
-                          <p className="text-xs text-tactical-muted font-mono">ONLINE</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {activePanel === 'risk' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">RISK MODELING</h2>
+                      </div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div className="bg-dark-800 p-4 rounded-lg border border-fire-500/30 bg-fire-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Flame className="w-4 h-4 text-fire-400" />
+                        <span className="text-sm font-mono text-tactical-300">EXTREME RISK ZONE</span>
+                      </div>
+                      <div className="text-sm font-mono text-fire-400">SECTOR 7 - 98% RISK</div>
+                      <div className="text-xs text-tactical-muted">Fuel moisture: 6% | Wind: 22 mph NW | Temp: 94°F</div>
+                      <div className="text-xs text-tactical-muted">Vegetation: Dense chaparral | Slope: 15°</div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg border border-warning-500/30 bg-warning-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Flame className="w-4 h-4 text-warning-400" />
+                        <span className="text-sm font-mono text-tactical-300">HIGH RISK ZONE</span>
+                      </div>
+                      <div className="text-sm font-mono text-warning-400">SECTOR 3 - 87% RISK</div>
+                      <div className="text-xs text-tactical-muted">Fuel moisture: 9% | Wind: 18 mph | Temp: 89°F</div>
+                      <div className="text-xs text-tactical-muted">Vegetation: Mixed conifer | Slope: 8°</div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg border border-tactical-500/30 bg-tactical-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Thermometer className="w-4 h-4 text-tactical-400" />
+                        <span className="text-sm font-mono text-tactical-300">MODERATE RISK</span>
+                      </div>
+                      <div className="text-sm font-mono text-tactical-400">SECTOR 1 - 45% RISK</div>
+                      <div className="text-xs text-tactical-muted">Fuel moisture: 15% | Wind: 6 mph | Temp: 78°F</div>
+                      <div className="text-xs text-tactical-muted">Vegetation: Oak woodland | Slope: 3°</div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg border border-tacticalGreen-500/30 bg-tacticalGreen-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Shield className="w-4 h-4 text-tacticalGreen-400" />
+                        <span className="text-sm font-mono text-tactical-300">LOW RISK ZONE</span>
+                      </div>
+                      <div className="text-sm font-mono text-tacticalGreen-400">SECTOR 5 - 12% RISK</div>
+                      <div className="text-xs text-tactical-muted">Fuel moisture: 28% | Wind: 3 mph | Temp: 72°F</div>
+                      <div className="text-xs text-tactical-muted">Vegetation: Riparian | Slope: 1°</div>
+                    </div>
+                  </div>
+                    </div>
+                  )}
+                  
+                  {activePanel === 'weather' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">WEATHER STATION</h2>
+                      </div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div className="bg-dark-800 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Wind className="w-4 h-4 text-tactical-400" />
+                        <span className="text-sm font-mono text-tactical-300">CURRENT CONDITIONS</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">WIND SPEED</p>
+                          <p className="text-lg font-mono text-tactical-400">22 mph</p>
+                          <p className="text-xs text-tactical-muted">Gusts: 28 mph</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">DIRECTION</p>
+                          <p className="text-lg font-mono text-tactical-400">NW</p>
+                          <p className="text-xs text-tactical-muted">315°</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">HUMIDITY</p>
+                          <p className="text-lg font-mono text-tactical-400">18%</p>
+                          <p className="text-xs text-tactical-muted">Dew point: 32°F</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">TEMP</p>
+                          <p className="text-lg font-mono text-tactical-400">94°F</p>
+                          <p className="text-xs text-tactical-muted">Heat index: 98°F</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Thermometer className="w-4 h-4 text-tactical-400" />
+                        <span className="text-sm font-mono text-tactical-300">FORECAST</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-mono text-tactical-muted">6 HOURS</span>
+                          <span className="text-sm font-mono text-tactical-400">Wind: 25 mph NW | Temp: 96°F</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-mono text-tactical-muted">12 HOURS</span>
+                          <span className="text-sm font-mono text-tactical-400">Wind: 18 mph NW | Temp: 88°F</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-mono text-tactical-muted">24 HOURS</span>
+                          <span className="text-sm font-mono text-tactical-400">Wind: 12 mph W | Temp: 82°F</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Gauge className="w-4 h-4 text-tactical-400" />
+                        <span className="text-sm font-mono text-tactical-300">FIRE WEATHER</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">FIRE DANGER</p>
+                          <p className="text-lg font-mono text-fire-400">EXTREME</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">Haines Index</p>
+                          <p className="text-lg font-mono text-warning-400">6</p>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                    </div>
+                  )}
+                  
+                  {activePanel === 'sensors' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">SENSOR NETWORK</h2>
+                      </div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div className="bg-dark-800 p-4 rounded-lg border border-fire-500/30 bg-fire-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Flame className="w-4 h-4 text-fire-400" />
+                        <span className="text-sm font-mono text-tactical-300">HEAT SENSOR #23</span>
+                      </div>
+                      <div className="text-sm font-mono text-fire-400">ALERT - ELEVATED TEMP</div>
+                      <div className="text-xs text-tactical-muted">Temperature: 145°F | Location: 40.123°N, 120.456°W</div>
+                      <div className="text-xs text-tactical-muted">Last update: 1 min ago | Battery: 89%</div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg border border-tacticalGreen-500/30 bg-tacticalGreen-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Eye className="w-4 h-4 text-tacticalGreen-400" />
+                        <span className="text-sm font-mono text-tactical-300">SMOKE DETECTOR #47</span>
+                      </div>
+                      <div className="text-sm font-mono text-tacticalGreen-400">ONLINE - NO SMOKE</div>
+                      <div className="text-xs text-tactical-muted">PM2.5: 12 μg/m³ | Location: 40.089°N, 120.234°W</div>
+                      <div className="text-xs text-tactical-muted">Last update: 30 sec ago | Battery: 94%</div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg border border-tacticalGreen-500/30 bg-tacticalGreen-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Eye className="w-4 h-4 text-tacticalGreen-400" />
+                        <span className="text-sm font-mono text-tactical-300">SMOKE DETECTOR #12</span>
+                      </div>
+                      <div className="text-sm font-mono text-tacticalGreen-400">ONLINE - NO SMOKE</div>
+                      <div className="text-xs text-tactical-muted">PM2.5: 8 μg/m³ | Location: 40.156°N, 120.345°W</div>
+                      <div className="text-xs text-tactical-muted">Last update: 45 sec ago | Battery: 91%</div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg border border-warning-500/30 bg-warning-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Thermometer className="w-4 h-4 text-warning-400" />
+                        <span className="text-sm font-mono text-tactical-300">WEATHER STATION #8</span>
+                      </div>
+                      <div className="text-sm font-mono text-warning-400">ONLINE - HIGH WIND</div>
+                      <div className="text-xs text-tactical-muted">Wind: 22 mph NW | Humidity: 18% | Location: 40.067°N, 120.178°W</div>
+                      <div className="text-xs text-tactical-muted">Last update: 1 min ago | Battery: 87%</div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg border border-tactical-500/30 bg-tactical-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Radio className="w-4 h-4 text-tactical-400" />
+                        <span className="text-sm font-mono text-tactical-300">COMMS HUB #5</span>
+                      </div>
+                      <div className="text-sm font-mono text-tactical-400">ONLINE - RELAY ACTIVE</div>
+                      <div className="text-xs text-tactical-muted">Connected devices: 8 | Signal strength: 95%</div>
+                      <div className="text-xs text-tactical-muted">Last update: 15 sec ago | Battery: 96%</div>
+                    </div>
+                  </div>
+                    </div>
+                  )}
+                  
+                  {activePanel === 'prediction' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">SPREAD PREDICTION</h2>
+                      </div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <div className="bg-dark-800 p-4 rounded-lg border border-fire-500/30 bg-fire-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Target className="w-4 h-4 text-fire-400" />
+                        <span className="text-sm font-mono text-tactical-300">ACTIVE FIRE - SECTOR 7</span>
+                      </div>
+                      <div className="text-sm font-mono text-fire-400">SPREADING RAPIDLY</div>
+                      <div className="text-xs text-tactical-muted">Rate: 0.4 mph | Direction: NE | Size: 2.3 acres</div>
+                      <div className="text-xs text-tactical-muted">Started: 14:15 | Fuel: Dense chaparral</div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="w-4 h-4 text-tactical-400" />
+                        <span className="text-sm font-mono text-tactical-300">6-HOUR FORECAST</span>
+                      </div>
+                      <div className="text-sm font-mono text-tactical-400">Perimeter: 4.7 miles</div>
+                      <div className="text-xs text-tactical-muted">Confidence: 87% | Area: 156 acres</div>
+                      <div className="text-xs text-tactical-muted">Threat to: Highway 89, 3 structures</div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="w-4 h-4 text-tactical-400" />
+                        <span className="text-sm font-mono text-tactical-300">12-HOUR FORECAST</span>
+                      </div>
+                      <div className="text-sm font-mono text-tactical-400">Perimeter: 8.2 miles</div>
+                      <div className="text-xs text-tactical-muted">Confidence: 72% | Area: 423 acres</div>
+                      <div className="text-xs text-tactical-muted">Threat to: Residential area, 12 structures</div>
+                    </div>
+                    
+                    <div className="bg-dark-800 p-4 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wind className="w-4 h-4 text-tactical-400" />
+                        <span className="text-sm font-mono text-tactical-300">SPREAD FACTORS</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">WIND IMPACT</p>
+                          <p className="text-sm font-mono text-fire-400">HIGH</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">TERRAIN</p>
+                          <p className="text-sm font-mono text-warning-400">MODERATE</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">FUEL LOAD</p>
+                          <p className="text-sm font-mono text-fire-400">EXTREME</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-tactical-muted font-mono">MOISTURE</p>
+                          <p className="text-sm font-mono text-fire-400">CRITICAL</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                    </div>
+                  )}
             </div>
           </div>
         </div>
