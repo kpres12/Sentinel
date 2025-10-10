@@ -7,6 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapLayers } from './MapLayers'
 import { MapControls } from './MapControls'
 import { MapLegend } from './MapLegend'
+import { TacticalMapOverlay } from './TacticalMapOverlay'
 
 export interface WildfireMapProps {
   initialViewState?: Partial<ViewState>
@@ -32,6 +33,7 @@ export function WildfireMap({
   const mapRef = useRef<MapRef>(null)
   const [viewState, setViewState] = useState<ViewState>(initialViewState as ViewState)
   const [selectedFeatures, setSelectedFeatures] = useState<any[]>([])
+  const [showTacticalOverlay, setShowTacticalOverlay] = useState(true)
 
   const handleViewStateChange = useCallback((evt: any) => {
     const newViewState = evt.viewState
@@ -49,7 +51,7 @@ export function WildfireMap({
   }, [onMapHover])
 
   return (
-    <div className={`relative w-full h-full ${className}`}>
+    <div className={`relative w-full h-full bg-dark-950 ${className}`}>
       <Map
         ref={mapRef}
         {...viewState}
@@ -71,7 +73,10 @@ export function WildfireMap({
             {
               id: 'background',
               type: 'raster',
-              source: 'raster-tiles'
+              source: 'raster-tiles',
+              paint: {
+                'raster-opacity': 0.8
+              }
             }
           ]
         }}
@@ -83,6 +88,13 @@ export function WildfireMap({
         <MapLegend />
         {children}
       </Map>
+      
+      {/* Tactical Map Overlay */}
+      {showTacticalOverlay && (
+        <TacticalMapOverlay 
+          onToggle={() => setShowTacticalOverlay(!showTacticalOverlay)}
+        />
+      )}
     </div>
   )
 }

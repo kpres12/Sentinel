@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "h3-js": "^4.1.0",
-    "turf": "^6.5.0"
+    "@turf/turf": "^6.5.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

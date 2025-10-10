@@ -2,46 +2,173 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap');
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-gray-600;
   }
   
   body {
-    @apply bg-background text-foreground;
+    @apply bg-dark-950 text-dark-100 font-sans;
+    background-image: 
+      radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 40% 80%, rgba(239, 68, 68, 0.1) 0%, transparent 50%);
+  }
+  
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: #475569 #1e293b;
   }
 }
 
 @layer components {
+  /* Tactical Button Styles */
   .btn {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background;
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tactical-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-dark-950;
   }
   
   .btn-primary {
-    @apply bg-wildfire-600 text-white hover:bg-wildfire-700;
+    @apply bg-tactical-600 text-white hover:bg-tactical-700 shadow-tactical border border-tactical-500/20;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-900 hover:bg-gray-300;
+    @apply bg-dark-800 text-dark-100 hover:bg-dark-700 border border-dark-600 shadow-tactical;
   }
   
   .btn-outline {
-    @apply border border-gray-300 bg-transparent hover:bg-gray-50;
+    @apply border border-tactical-500 bg-transparent text-tactical-400 hover:bg-tactical-500/10 hover:text-tactical-300;
   }
   
+  .btn-danger {
+    @apply bg-fire-600 text-white hover:bg-fire-700 shadow-tactical border border-fire-500/20;
+  }
+  
+  .btn-warning {
+    @apply bg-warning-600 text-white hover:bg-warning-700 shadow-tactical border border-warning-500/20;
+  }
+  
+  .btn-success {
+    @apply bg-tacticalGreen-600 text-white hover:bg-tacticalGreen-700 shadow-tactical border border-tacticalGreen-500/20;
+  }
+  
+  /* Tactical Card Styles */
   .card {
-    @apply rounded-lg border bg-white shadow-sm;
+    @apply rounded-lg border border-dark-700 bg-dark-800/80 backdrop-blur-sm shadow-tactical;
   }
   
+  .card-header {
+    @apply border-b border-dark-700 bg-dark-900/50 px-4 py-3;
+  }
+  
+  .card-content {
+    @apply p-4;
+  }
+  
+  .card-footer {
+    @apply border-t border-dark-700 bg-dark-900/50 px-4 py-3;
+  }
+  
+  /* Tactical Input Styles */
   .input {
-    @apply flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wildfire-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-10 w-full rounded-md border border-dark-600 bg-dark-800 px-3 py-2 text-sm text-dark-100 placeholder:text-dark-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tactical-500 focus-visible:ring-offset-2 focus-visible:ring-offset-dark-950 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .input:focus {
+    @apply border-tactical-500 shadow-glow-blue;
   }
   
   .label {
-    @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+    @apply text-sm font-medium leading-none text-dark-200 peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
+  }
+  
+  /* Status Indicators */
+  .status-indicator {
+    @apply inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .status-online {
+    @apply bg-tacticalGreen-500/20 text-tacticalGreen-400 border border-tacticalGreen-500/30;
+  }
+  
+  .status-offline {
+    @apply bg-fire-500/20 text-fire-400 border border-fire-500/30;
+  }
+  
+  .status-warning {
+    @apply bg-warning-500/20 text-warning-400 border border-warning-500/30;
+  }
+  
+  .status-critical {
+    @apply bg-fire-600/20 text-fire-300 border border-fire-600/30 animate-pulse;
+  }
+  
+  /* Tactical Panel */
+  .tactical-panel {
+    @apply bg-dark-900/90 backdrop-blur-md border border-dark-700 shadow-tactical-lg;
+  }
+  
+  .tactical-header {
+    @apply bg-gradient-to-r from-dark-800 to-dark-900 border-b border-dark-700 px-4 py-3;
+  }
+  
+  /* Glow Effects */
+  .glow-green {
+    @apply shadow-glow;
+  }
+  
+  .glow-red {
+    @apply shadow-glow-red;
+  }
+  
+  .glow-blue {
+    @apply shadow-glow-blue;
+  }
+  
+  /* Tactical Typography */
+  .tactical-title {
+    @apply font-tactical text-xl font-bold text-tactical-400;
+  }
+  
+  .tactical-subtitle {
+    @apply font-tactical text-lg font-semibold text-tactical-300;
+  }
+  
+  .tactical-text {
+    @apply text-dark-200;
+  }
+  
+  .tactical-muted {
+    @apply text-dark-400;
+  }
+  
+  /* Grid Lines (like ATAK) */
+  .grid-overlay {
+    background-image: 
+      linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  /* Tactical Scrollbar */
+  .tactical-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .tactical-scrollbar::-webkit-scrollbar-track {
+    @apply bg-dark-800;
+  }
+  
+  .tactical-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-dark-600 rounded-full;
+  }
+  
+  .tactical-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-dark-500;
   }
 }
 
