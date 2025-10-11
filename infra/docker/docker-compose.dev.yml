@@ -170,6 +170,76 @@ services:
     volumes:
       - ../../apps/predict:/app
 
+  # Summit Integration Service
+  summit-integration:
+    build:
+      context: ../../apps/summit-integration
+      dockerfile: Dockerfile
+    container_name: wildfire-summit-integration
+    environment:
+      SUMMIT_API_URL: https://api.summit-os.bigmt.ai
+      SUMMIT_API_KEY: ${SUMMIT_API_KEY}
+      VIDEO_STREAMING: true
+      OFFLINE_MODE: true
+    ports:
+      - "8001:8001"
+    depends_on:
+      - apigw
+    volumes:
+      - ../../apps/summit-integration:/app
+
+  # Sentry Tower Agent
+  sentry-tower:
+    build:
+      context: ../../apps/sentry-tower
+      dockerfile: Dockerfile
+    container_name: wildfire-sentry-tower
+    environment:
+      TOWER_ID: tower-001
+      TOWER_NAME: Sentry Tower Alpha
+      TOWER_LATITUDE: 40.0
+      TOWER_LONGITUDE: -120.0
+      TOWER_ALTITUDE: 1000.0
+      THERMAL_CAMERA_MODEL: FLIR_A35
+      THERMAL_CAMERA_RESOLUTION: 640x512
+      THERMAL_CAMERA_FPS: 30
+      THERMAL_DETECTION_THRESHOLD: 0.7
+      ACOUSTIC_ARRAY_ENABLED: true
+      ACOUSTIC_MICROPHONES: 4
+      ACOUSTIC_DETECTION_THRESHOLD: 0.6
+      SUMMIT_API_URL: https://api.summit-os.bigmt.ai
+      SUMMIT_API_KEY: ${SUMMIT_API_KEY}
+      SUMMIT_VIDEO_STREAMING: true
+      SUMMIT_OFFLINE_MODE: true
+    depends_on:
+      - summit-integration
+    volumes:
+      - ../../apps/sentry-tower:/app
+
+  # FireLine Bot Controller
+  fireline-bot:
+    build:
+      context: ../../apps/fireline-bot
+      dockerfile: Dockerfile
+    container_name: wildfire-fireline-bot
+    environment:
+      BOT_ID: fireline-bot-001
+      BOT_NAME: FireLine Alpha
+      BOT_MAX_SPEED: 5.0
+      BOT_MAX_SLOPE: 30.0
+      BOT_CLEARING_WIDTH: 3.0
+      BOT_WATER_CAPACITY: 500
+      BOT_FUEL_CAPACITY: 50
+      BOT_OPERATING_TIME: 8
+      BOT_SAFETY_ENABLED: true
+      BOT_EMERGENCY_STOP_ENABLED: true
+      SUMMIT_API_URL: https://api.summit-os.bigmt.ai
+      SUMMIT_API_KEY: ${SUMMIT_API_KEY}
+    depends_on:
+      - summit-integration
+    volumes:
+      - ../../apps/fireline-bot:/app
+
 volumes:
   postgres_data:
   redis_data:
