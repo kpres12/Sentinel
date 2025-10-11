@@ -1,6 +1,6 @@
 /**
- * FireLine Bot Controller for FireLine Application
- * Main entry point for FireLine bot operations
+ * KOFA Bot Controller for FireLine Application
+ * Main entry point for KOFA bot operations
  */
 
 import { FireLineBotController, BotMission, VegetationClearingParams, FireSuppressionParams, BuildLineParams } from '@bigmt/summit-integration';
@@ -9,17 +9,17 @@ import { Config } from './Config';
 import { BotMissionExecutor } from './BotMissionExecutor';
 import { SafetyMonitor } from './SafetyMonitor';
 
-const logger = new Logger('FireLineBot');
+const logger = new Logger('KOFA');
 const config = new Config();
 
 async function main() {
   try {
-    logger.info('Starting FireLine Bot Controller...');
+    logger.info('Starting KOFA Bot Controller...');
     
     // Load configuration
     const botConfig = {
       botId: config.get('BOT_ID', 'fireline-bot-001'),
-      botName: config.get('BOT_NAME', 'FireLine Alpha'),
+      botName: config.get('BOT_NAME', 'KOFA Alpha'),
       summitApiUrl: config.get('SUMMIT_API_URL', 'https://api.summit-os.bigmt.ai'),
       summitApiKey: config.get('SUMMIT_API_KEY', ''),
       maxSpeed: config.getNumber('BOT_MAX_SPEED', 5.0),
@@ -32,7 +32,7 @@ async function main() {
       emergencyStopEnabled: config.getBoolean('BOT_EMERGENCY_STOP_ENABLED', true)
     };
 
-    // Create FireLine bot controller
+    // Create KOFA bot controller
     const botController = new FireLineBotController({
       apiUrl: botConfig.summitApiUrl,
       apiKey: botConfig.summitApiKey,
@@ -112,10 +112,10 @@ async function main() {
       process.exit(1);
     });
 
-    logger.info('FireLine Bot Controller started successfully');
+    logger.info('KOFA Bot Controller started successfully');
 
   } catch (error) {
-    logger.error('Failed to start FireLine Bot Controller:', error);
+    logger.error('Failed to start KOFA Bot Controller:', error);
     process.exit(1);
   }
 }

@@ -404,10 +404,38 @@ function HomePageContent() {
                     <div className="absolute top-1/6 right-1/6 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
                     
                     {/* Device Locations - larger and more visible */}
+                    {/* FireWatch Towers (Fixed positions) */}
                     <div className="absolute top-1/5 left-1/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                    <div className="absolute top-1/5 left-1/5 -mt-8 -ml-2">
+                      <span className="text-xs font-mono text-blue-400 bg-dark-800/80 px-1 rounded">FireWatch Alpha</span>
+                    </div>
+                    
                     <div className="absolute top-2/5 right-1/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
-                    <div className="absolute bottom-1/5 left-2/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
-                    <div className="absolute bottom-2/5 right-2/5 w-6 h-6 bg-blue-400 rounded-full animate-pulse shadow-lg shadow-blue-400/50"></div>
+                    <div className="absolute top-2/5 right-1/5 -mt-8 -ml-2">
+                      <span className="text-xs font-mono text-blue-400 bg-dark-800/80 px-1 rounded">FireWatch Bravo</span>
+                    </div>
+                    
+                    {/* KOFA Bots (Ground positions) */}
+                    <div className="absolute bottom-1/5 left-2/5 w-6 h-6 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                    <div className="absolute bottom-1/5 left-2/5 -mt-8 -ml-2">
+                      <span className="text-xs font-mono text-green-400 bg-dark-800/80 px-1 rounded">KOFA Alpha</span>
+                    </div>
+                    
+                    <div className="absolute bottom-2/5 right-2/5 w-6 h-6 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                    <div className="absolute bottom-2/5 right-2/5 -mt-8 -ml-2">
+                      <span className="text-xs font-mono text-green-400 bg-dark-800/80 px-1 rounded">KOFA Bravo</span>
+                    </div>
+                    
+                    {/* FireFly Drones (Air positions) */}
+                    <div className="absolute top-1/3 left-1/3 w-5 h-5 bg-yellow-400 rounded-full animate-pulse shadow-lg shadow-yellow-400/50"></div>
+                    <div className="absolute top-1/3 left-1/3 -mt-8 -ml-2">
+                      <span className="text-xs font-mono text-yellow-400 bg-dark-800/80 px-1 rounded">FireFly Alpha</span>
+                    </div>
+                    
+                    <div className="absolute top-1/2 right-1/3 w-5 h-5 bg-yellow-400 rounded-full animate-pulse shadow-lg shadow-yellow-400/50"></div>
+                    <div className="absolute top-1/2 right-1/3 -mt-8 -ml-2">
+                      <span className="text-xs font-mono text-yellow-400 bg-dark-800/80 px-1 rounded">FireFly Bravo</span>
+                    </div>
                     
                     {/* Risk Zones - much more visible */}
                     <div className="absolute top-1/3 left-1/6 w-24 h-24 border-4 border-red-500/80 rounded-full bg-red-500/20 animate-pulse shadow-lg shadow-red-500/30"></div>
@@ -435,6 +463,31 @@ function HomePageContent() {
                       <div className="bg-dark-800/80 backdrop-blur-sm rounded-lg p-2 border border-dark-700">
                         <div className="w-16 h-1 bg-tactical-400 mb-1"></div>
                         <span className="text-xs font-mono text-tactical-muted">1 mile</span>
+                      </div>
+                    </div>
+                    
+                    {/* Device Legend */}
+                    <div className="absolute bottom-4 right-4">
+                      <div className="bg-dark-800/80 backdrop-blur-sm rounded-lg p-3 border border-dark-700">
+                        <h4 className="text-xs font-mono text-tactical-300 mb-2">DEVICE LEGEND</h4>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
+                            <span className="text-xs font-mono text-tactical-muted">FireWatch Towers</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                            <span className="text-xs font-mono text-tactical-muted">KOFA Bots</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                            <span className="text-xs font-mono text-tactical-muted">FireFly Drones</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                            <span className="text-xs font-mono text-tactical-muted">Sensor Network</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
@@ -503,7 +556,7 @@ function HomePageContent() {
                       <div className="bg-dark-800 p-3 rounded-lg border border-dark-700">
                         <div className="flex items-center gap-2 mb-2">
                           <Plane className="w-4 h-4 text-tacticalGreen-400" />
-                          <span className="text-xs font-mono text-tactical-300">FIRELINE ALPHA</span>
+                          <span className="text-xs font-mono text-tactical-300">KOFA ALPHA</span>
                         </div>
                         <div className="text-sm font-mono text-tacticalGreen-400">ONLINE</div>
                         <div className="text-xs text-tactical-muted">Battery: 87% | Speed: 12 mph</div>
@@ -512,7 +565,7 @@ function HomePageContent() {
                       <div className="bg-dark-800 p-3 rounded-lg border border-dark-700">
                         <div className="flex items-center gap-2 mb-2">
                           <Plane className="w-4 h-4 text-tacticalGreen-400" />
-                          <span className="text-xs font-mono text-tactical-300">SURVEILLANCE BRAVO</span>
+                          <span className="text-xs font-mono text-tactical-300">FIREFLY BRAVO</span>
                         </div>
                         <div className="text-sm font-mono text-tacticalGreen-400">ONLINE</div>
                         <div className="text-xs text-tactical-muted">Battery: 92% | Altitude: 1,200 ft</div>
@@ -521,7 +574,7 @@ function HomePageContent() {
                       <div className="bg-dark-800 p-3 rounded-lg border border-dark-700">
                         <div className="flex items-center gap-2 mb-2">
                           <Plane className="w-4 h-4 text-tacticalGreen-400" />
-                          <span className="text-xs font-mono text-tactical-300">PATROL CHARLIE</span>
+                          <span className="text-xs font-mono text-tactical-300">KOFA CHARLIE</span>
                         </div>
                         <div className="text-sm font-mono text-tacticalGreen-400">ONLINE</div>
                         <div className="text-xs text-tactical-muted">Battery: 78% | Speed: 8 mph</div>
