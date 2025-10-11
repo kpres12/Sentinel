@@ -1,5 +1,5 @@
 /**
- * Bot Mission Executor for FireLine Bot Controller
+ * Bot Mission Executor for KOFA Bot Controller
  * Handles execution of bot missions with safety monitoring
  */
 

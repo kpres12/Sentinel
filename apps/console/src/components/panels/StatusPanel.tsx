@@ -24,7 +24,7 @@ export function StatusPanel() {
   const devices = [
     { 
       id: 'robot-1', 
-      name: 'FIRELINE ALPHA', 
+      name: 'KOFA ALPHA', 
       type: 'robot',
       status: 'online', 
       battery: 87, 
@@ -34,7 +34,7 @@ export function StatusPanel() {
     },
     { 
       id: 'drone-1', 
-      name: 'SURVEILLANCE BRAVO', 
+      name: 'FIREFLY BRAVO', 
       type: 'drone',
       status: 'online', 
       battery: 92, 
@@ -44,7 +44,7 @@ export function StatusPanel() {
     },
     { 
       id: 'robot-2', 
-      name: 'FIRELINE CHARLIE', 
+      name: 'KOFA CHARLIE', 
       type: 'robot',
       status: 'offline', 
       battery: 0, 
@@ -65,7 +65,7 @@ export function StatusPanel() {
     { 
       id: '2', 
       type: 'warning', 
-      message: 'ROBOT CHARLIE OFFLINE - INVESTIGATING', 
+      message: 'KOFA CHARLIE OFFLINE - INVESTIGATING', 
       time: '14:28:42',
       priority: 'PRIORITY 2'
     },

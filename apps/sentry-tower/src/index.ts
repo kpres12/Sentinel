@@ -12,12 +12,12 @@ const config = new Config();
 
 async function main() {
   try {
-    logger.info('Starting Sentry Tower Edge Agent...');
+    logger.info('Starting FireWatch Edge Agent...');
     
     // Load configuration
     const towerConfig: TowerConfig = {
       towerId: config.get('TOWER_ID', 'tower-001'),
-      name: config.get('TOWER_NAME', 'Sentry Tower Alpha'),
+      name: config.get('TOWER_NAME', 'FireWatch Alpha'),
       position: {
         latitude: parseFloat(config.get('TOWER_LATITUDE', '40.0')),
         longitude: parseFloat(config.get('TOWER_LONGITUDE', '-120.0')),
@@ -58,11 +58,11 @@ async function main() {
     
     // Setup event handlers
     sentryTower.on('started', () => {
-      logger.info('Sentry Tower Agent started successfully');
+      logger.info('FireWatch Agent started successfully');
     });
 
     sentryTower.on('stopped', () => {
-      logger.info('Sentry Tower Agent stopped');
+      logger.info('FireWatch Agent stopped');
     });
 
     sentryTower.on('fireDetection', (detection) => {
@@ -74,7 +74,7 @@ async function main() {
     });
 
     sentryTower.on('error', (error) => {
-      logger.error('Sentry Tower Agent error:', error);
+      logger.error('FireWatch Agent error:', error);
     });
 
     // Start the agent
@@ -105,7 +105,7 @@ async function main() {
     });
 
   } catch (error) {
-    logger.error('Failed to start Sentry Tower Edge Agent:', error);
+    logger.error('Failed to start FireWatch Edge Agent:', error);
     process.exit(1);
   }
 }

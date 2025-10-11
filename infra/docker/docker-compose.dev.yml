@@ -196,7 +196,7 @@ services:
     container_name: wildfire-sentry-tower
     environment:
       TOWER_ID: tower-001
-      TOWER_NAME: Sentry Tower Alpha
+      TOWER_NAME: FireWatch Alpha
       TOWER_LATITUDE: 40.0
       TOWER_LONGITUDE: -120.0
       TOWER_ALTITUDE: 1000.0
@@ -224,7 +224,7 @@ services:
     container_name: wildfire-fireline-bot
     environment:
       BOT_ID: fireline-bot-001
-      BOT_NAME: FireLine Alpha
+      BOT_NAME: KOFA Alpha
       BOT_MAX_SPEED: 5.0
       BOT_MAX_SLOPE: 30.0
       BOT_CLEARING_WIDTH: 3.0

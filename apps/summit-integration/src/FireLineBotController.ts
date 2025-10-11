@@ -1,6 +1,6 @@
 /**
- * FireLine Bot Controller for FireLine Application
- * Manages FireLine bot missions, vegetation clearing, and fire suppression
+ * KOFA Bot Controller for FireLine Application
+ * Manages KOFA bot missions, vegetation clearing, and fire suppression
  */
 
 import { EventEmitter } from 'events';

@@ -1,5 +1,5 @@
 /**
- * Sentry Tower Agent for FireLine Application
+ * FireWatch Agent for FireLine Application
  * Manages thermal cameras, acoustic arrays, and multi-sensor fusion for fire detection
  */
 

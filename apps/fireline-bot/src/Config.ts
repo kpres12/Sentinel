@@ -1,5 +1,5 @@
 /**
- * Configuration for FireLine Bot Controller
+ * Configuration for KOFA Bot Controller
  */
 
 export class Config {
