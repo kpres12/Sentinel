@@ -26,6 +26,8 @@ import {
 import { AlertsPanel } from '../components/panels/AlertsPanel'
 import { DevicesPanel } from '../components/panels/DevicesPanel'
 import { MissionsPanel } from '../components/panels/MissionsPanel'
+import { DroneControlPanel } from '../components/controls/DroneControlPanel'
+import { KOFAMissionPanel } from '../components/controls/KOFAMissionPanel'
 import { useSummitConnection } from '../hooks/useSummit'
 
 const queryClient = new QueryClient()
@@ -359,6 +361,15 @@ function HomePageContent() {
                 >
                   <Radio className="w-5 h-5 text-tactical-400" />
                   <span className="text-sm font-mono text-tactical-300">MISSIONS</span>
+                </button>
+                <button
+                  onClick={() => setActivePanel('control')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'control' ? 'bg-tactical-500/20 border border-tactical-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Zap className="w-5 h-5 text-tactical-400" />
+                  <span className="text-sm font-mono text-tactical-300">CONTROL</span>
                 </button>
                 <button
                   onClick={() => setActivePanel('intelligence')}
@@ -948,6 +959,32 @@ function HomePageContent() {
                   )}
                   
                   {activePanel === 'missions' && <MissionsPanel />}
+                  
+                  {activePanel === 'control' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">DEVICE CONTROL</h2>
+                        <p className="text-xs text-tactical-muted font-mono">Control FireFly drones and assign KOFA missions</p>
+                      </div>
+                      <div className="flex-1 flex">
+                        <div className="w-1/2 border-r border-dark-700">
+                          <DroneControlPanel 
+                            selectedDrone={undefined} // Will be set when drone is selected
+                            onMissionCreate={(mission) => console.log('Drone mission created:', mission)}
+                            onEmergencyReturn={(droneId) => console.log('Emergency return for drone:', droneId)}
+                          />
+                        </div>
+                        <div className="w-1/2">
+                          <KOFAMissionPanel 
+                            selectedBot={undefined} // Will be set when bot is selected
+                            onMissionAssign={(mission) => console.log('KOFA mission assigned:', mission)}
+                            onEmergencyStop={(botId) => console.log('Emergency stop for bot:', botId)}
+                            onParameterUpdate={(botId, params) => console.log('Parameters updated for bot:', botId, params)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {activePanel === 'intelligence' && (
                     <div className="h-full flex flex-col">
