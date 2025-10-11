@@ -28,6 +28,7 @@ import { DevicesPanel } from '../components/panels/DevicesPanel'
 import { MissionsPanel } from '../components/panels/MissionsPanel'
 import { DroneControlPanel } from '../components/controls/DroneControlPanel'
 import { KOFAMissionPanel } from '../components/controls/KOFAMissionPanel'
+import { VideoFeedPanel } from '../components/panels/VideoFeedPanel'
 import { useSummitConnection } from '../hooks/useSummit'
 
 const queryClient = new QueryClient()
@@ -370,6 +371,15 @@ function HomePageContent() {
                 >
                   <Zap className="w-5 h-5 text-tactical-400" />
                   <span className="text-sm font-mono text-tactical-300">CONTROL</span>
+                </button>
+                <button
+                  onClick={() => setActivePanel('video')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'video' ? 'bg-tactical-500/20 border border-tactical-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Camera className="w-5 h-5 text-tactical-400" />
+                  <span className="text-sm font-mono text-tactical-300">VIDEO FEEDS</span>
                 </button>
                 <button
                   onClick={() => setActivePanel('intelligence')}
@@ -985,6 +995,8 @@ function HomePageContent() {
                       </div>
                     </div>
                   )}
+                  
+                  {activePanel === 'video' && <VideoFeedPanel />}
                   
                   {activePanel === 'intelligence' && (
                     <div className="h-full flex flex-col">
