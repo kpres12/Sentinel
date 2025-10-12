@@ -27,8 +27,8 @@ export function MapInteractionHandler({
   const drawingTimeoutRef = useRef<NodeJS.Timeout>()
 
   const handleMapClick = useCallback((event: any) => {
-    const { lat = event.lngLat.lat
-    const lng = event.lngLat.lng
+    const { lat } = event.lngLat
+    const { lng } = event.lngLat
 
     if (drawingMode === 'none') {
       onPointClick?.(lat, lng)
