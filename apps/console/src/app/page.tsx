@@ -21,7 +21,8 @@ import {
   Gauge,
   Menu,
   X,
-  Layers
+  Layers,
+  Camera
 } from 'lucide-react'
 import { AlertsPanel } from '../components/panels/AlertsPanel'
 import { DevicesPanel } from '../components/panels/DevicesPanel'
