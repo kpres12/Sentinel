@@ -1,0 +1,421 @@
+# Backup and disaster recovery configuration for wildfire operations platform
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-config
+  namespace: wildfire-ops
+data:
+  backup-schedule.yaml: |
+    # Database backup schedule
+    databases:
+      postgresql:
+        schedule: "0 2 * * *"  # Daily at 2 AM
+        retention: "30d"
+        compression: true
+        encryption: true
+        destinations:
+          - s3://wildfire-backups/postgresql/
+          - azure://wildfire-backups/postgresql/
+      
+      redis:
+        schedule: "0 */6 * * *"  # Every 6 hours
+        retention: "7d"
+        compression: true
+        destinations:
+          - s3://wildfire-backups/redis/
+    
+    # Application data backup
+    application_data:
+      telemetry:
+        schedule: "0 1 * * *"  # Daily at 1 AM
+        retention: "90d"
+        compression: true
+        encryption: true
+      
+      detections:
+        schedule: "0 0 * * *"  # Daily at midnight
+        retention: "365d"
+        compression: true
+        encryption: true
+      
+      missions:
+        schedule: "0 3 * * *"  # Daily at 3 AM
+        retention: "365d"
+        compression: true
+        encryption: true
+    
+    # Configuration backup
+    configurations:
+      kubernetes:
+        schedule: "0 4 * * 0"  # Weekly on Sunday at 4 AM
+        retention: "52w"
+        destinations:
+          - s3://wildfire-backups/k8s-configs/
+      
+      secrets:
+        schedule: "0 5 * * 0"  # Weekly on Sunday at 5 AM
+        retention: "52w"
+        encryption: true
+        destinations:
+          - s3://wildfire-backups/secrets/
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgresql-backup
+  namespace: wildfire-ops
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: postgres-backup
+              image: postgres:15
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql-credentials
+                      key: password
+                - name: PGHOST
+                  value: "postgresql-service"
+                - name: PGUSER
+                  value: "wildfire_user"
+                - name: PGDATABASE
+                  value: "wildfire_ops"
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: secret-access-key
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  
+                  # Create backup filename with timestamp
+                  BACKUP_FILE="wildfire_ops_$(date +%Y%m%d_%H%M%S).sql"
+                  COMPRESSED_FILE="${BACKUP_FILE}.gz"
+                  
+                  echo "Starting PostgreSQL backup: $BACKUP_FILE"
+                  
+                  # Create database dump
+                  pg_dump -h $PGHOST -U $PGUSER -d $PGDATABASE \
+                    --verbose --clean --if-exists --create \
+                    --format=custom --compress=9 \
+                    --file=/tmp/$BACKUP_FILE
+                  
+                  # Compress the backup
+                  gzip /tmp/$BACKUP_FILE
+                  
+                  # Upload to S3
+                  aws s3 cp /tmp/$COMPRESSED_FILE s3://wildfire-backups/postgresql/$(date +%Y/%m/%d)/$COMPRESSED_FILE
+                  
+                  # Cleanup local files
+                  rm -f /tmp/$COMPRESSED_FILE
+                  
+                  echo "PostgreSQL backup completed successfully"
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /tmp
+          volumes:
+            - name: backup-storage
+              emptyDir: {}
+          restartPolicy: OnFailure
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: redis-backup
+  namespace: wildfire-ops
+spec:
+  schedule: "0 */6 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: redis-backup
+              image: redis:7
+              env:
+                - name: REDIS_HOST
+                  value: "redis-service"
+                - name: REDIS_PORT
+                  value: "6379"
+                - name: REDIS_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: redis-credentials
+                      key: password
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: secret-access-key
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  
+                  # Create backup filename with timestamp
+                  BACKUP_FILE="redis_$(date +%Y%m%d_%H%M%S).rdb"
+                  
+                  echo "Starting Redis backup: $BACKUP_FILE"
+                  
+                  # Create Redis backup using BGSAVE
+                  redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD BGSAVE
+                  
+                  # Wait for backup to complete
+                  while [ $(redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD LASTSAVE) -eq $(redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD LASTSAVE) ]; do
+                    sleep 1
+                  done
+                  
+                  # Copy the RDB file
+                  redis-cli -h $REDIS_HOST -p $REDIS_PORT -a $REDIS_PASSWORD --rdb /tmp/$BACKUP_FILE
+                  
+                  # Compress and upload to S3
+                  gzip /tmp/$BACKUP_FILE
+                  aws s3 cp /tmp/${BACKUP_FILE}.gz s3://wildfire-backups/redis/$(date +%Y/%m/%d)/${BACKUP_FILE}.gz
+                  
+                  # Cleanup
+                  rm -f /tmp/${BACKUP_FILE}.gz
+                  
+                  echo "Redis backup completed successfully"
+          restartPolicy: OnFailure
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: disaster-recovery-plan
+  namespace: wildfire-ops
+data:
+  recovery-procedures.md: |
+    # Wildfire Operations Platform - Disaster Recovery Procedures
+    
+    ## Recovery Time Objectives (RTO) and Recovery Point Objectives (RPO)
+    
+    | Component | RTO | RPO | Priority |
+    |-----------|-----|-----|----------|
+    | API Gateway | 5 minutes | 1 hour | Critical |
+    | Console | 10 minutes | 1 hour | High |
+    | Database | 15 minutes | 1 hour | Critical |
+    | MQTT Broker | 5 minutes | 1 hour | Critical |
+    | Edge Agents | 2 minutes | 5 minutes | Critical |
+    
+    ## Disaster Scenarios and Response
+    
+    ### 1. Complete Cluster Failure
+    
+    **Detection:**
+    - All health checks failing
+    - No response from any services
+    - Monitoring alerts: "Cluster Down"
+    
+    **Response:**
+    1. Activate backup cluster in secondary region
+    2. Restore database from latest backup
+    3. Update DNS to point to backup cluster
+    4. Notify all stakeholders
+    
+    **Recovery Steps:**
+    ```bash
+    # 1. Activate backup cluster
+    kubectl config use-context backup-cluster
+    kubectl apply -f infra/k8s/
+    
+    # 2. Restore database
+    ./scripts/restore-database.sh latest
+    
+    # 3. Update DNS
+    ./scripts/update-dns.sh backup-cluster
+    
+    # 4. Verify services
+    ./scripts/health-check.sh
+    ```
+    
+    ### 2. Database Corruption/Loss
+    
+    **Detection:**
+    - Database connection errors
+    - Data inconsistency alerts
+    - Failed database health checks
+    
+    **Response:**
+    1. Stop all write operations
+    2. Assess corruption extent
+    3. Restore from latest clean backup
+    4. Replay transaction logs if available
+    
+    **Recovery Steps:**
+    ```bash
+    # 1. Stop write operations
+    kubectl scale deployment wildfire-api-gateway --replicas=0
+    
+    # 2. Restore database
+    ./scripts/restore-database.sh $(date -d "yesterday" +%Y%m%d)
+    
+    # 3. Verify data integrity
+    ./scripts/verify-database.sh
+    
+    # 4. Resume operations
+    kubectl scale deployment wildfire-api-gateway --replicas=3
+    ```
+    
+    ### 3. Network Partition
+    
+    **Detection:**
+    - Intermittent connectivity issues
+    - Split-brain scenarios
+    - Inconsistent data between regions
+    
+    **Response:**
+    1. Identify affected regions
+    2. Isolate affected components
+    3. Maintain service in unaffected regions
+    4. Resync data when connectivity restored
+    
+    ### 4. Security Breach
+    
+    **Detection:**
+    - Unauthorized access alerts
+    - Unusual API activity
+    - Security scanning alerts
+    
+    **Response:**
+    1. Isolate affected systems
+    2. Rotate all credentials
+    3. Audit access logs
+    4. Restore from clean backup if necessary
+    
+    ## Emergency Contacts
+    
+    | Role | Primary | Secondary | Phone | Email |
+    |------|---------|-----------|-------|-------|
+    | Incident Commander | John Doe | Jane Smith | +1-555-0101 | john@wildfire-ops.com |
+    | Technical Lead | Alice Johnson | Bob Wilson | +1-555-0102 | alice@wildfire-ops.com |
+    | Database Admin | Carol Brown | David Lee | +1-555-0103 | carol@wildfire-ops.com |
+    | Security Officer | Eve Davis | Frank Miller | +1-555-0104 | eve@wildfire-ops.com |
+    
+    ## Communication Channels
+    
+    - **Primary:** Slack #incident-response
+    - **Secondary:** Microsoft Teams Incident Channel
+    - **Emergency:** Conference Bridge +1-555-INCIDENT
+    - **Status Page:** https://status.wildfire-ops.com
+    
+    ## Post-Incident Procedures
+    
+    1. **Immediate (0-2 hours):**
+       - Confirm service restoration
+       - Document timeline of events
+       - Notify stakeholders of resolution
+    
+    2. **Short-term (2-24 hours):**
+       - Conduct preliminary root cause analysis
+       - Implement immediate fixes
+       - Update monitoring and alerting
+    
+    3. **Long-term (1-7 days):**
+       - Complete detailed post-mortem
+       - Implement preventive measures
+       - Update disaster recovery procedures
+       - Conduct lessons learned session
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backup-encryption-key
+  namespace: wildfire-ops
+type: Opaque
+data:
+  # Base64 encoded encryption key for backups
+  encryption-key: <BASE64_ENCODED_ENCRYPTION_KEY>
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-verification
+  namespace: wildfire-ops
+spec:
+  schedule: "0 6 * * *"  # Daily at 6 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: backup-verifier
+              image: alpine:latest
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: aws-credentials
+                      key: secret-access-key
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  
+                  echo "Starting backup verification..."
+                  
+                  # Install required tools
+                  apk add --no-cache aws-cli postgresql-client redis
+                  
+                  # Verify PostgreSQL backup exists and is readable
+                  LATEST_PG_BACKUP=$(aws s3 ls s3://wildfire-backups/postgresql/$(date +%Y/%m/%d)/ | tail -1 | awk '{print $4}')
+                  if [ -z "$LATEST_PG_BACKUP" ]; then
+                    echo "ERROR: No PostgreSQL backup found for today"
+                    exit 1
+                  fi
+                  
+                  # Download and test PostgreSQL backup
+                  aws s3 cp s3://wildfire-backups/postgresql/$(date +%Y/%m/%d)/$LATEST_PG_BACKUP /tmp/
+                  gunzip /tmp/$LATEST_PG_BACKUP
+                  
+                  # Verify backup integrity (basic check)
+                  if ! file /tmp/${LATEST_PG_BACKUP%.gz} | grep -q "PostgreSQL"; then
+                    echo "ERROR: PostgreSQL backup appears corrupted"
+                    exit 1
+                  fi
+                  
+                  # Verify Redis backup exists
+                  LATEST_REDIS_BACKUP=$(aws s3 ls s3://wildfire-backups/redis/$(date +%Y/%m/%d)/ | tail -1 | awk '{print $4}')
+                  if [ -z "$LATEST_REDIS_BACKUP" ]; then
+                    echo "ERROR: No Redis backup found for today"
+                    exit 1
+                  fi
+                  
+                  echo "Backup verification completed successfully"
+                  
+                  # Send success notification
+                  aws sns publish \
+                    --topic-arn arn:aws:sns:us-west-2:123456789012:wildfire-ops-alerts \
+                    --message "Daily backup verification completed successfully" \
+                    --subject "Backup Verification Success"
+          restartPolicy: OnFailure
