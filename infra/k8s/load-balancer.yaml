@@ -1,0 +1,291 @@
+# Load balancing and scaling configuration for wildfire operations platform
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: wildfire-api-gateway-lb
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-api-gateway
+    tier: backend
+spec:
+  type: LoadBalancer
+  selector:
+    app: wildfire-api-gateway
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+      protocol: TCP
+    - name: grpc
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800 # 3 hours
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wildfire-console-lb
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-console
+    tier: frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: wildfire-console
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+  sessionAffinity: ClientIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wildfire-mqtt-lb
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-mqtt
+    tier: messaging
+spec:
+  type: LoadBalancer
+  selector:
+    app: wildfire-mqtt
+  ports:
+    - name: mqtt
+      port: 1883
+      targetPort: 1883
+      protocol: TCP
+    - name: websocket
+      port: 8083
+      targetPort: 8083
+      protocol: TCP
+    - name: dashboard
+      port: 18083
+      targetPort: 18083
+      protocol: TCP
+
+---
+# Horizontal Pod Autoscaler for API Gateway
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wildfire-api-gateway-hpa
+  namespace: wildfire-ops
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wildfire-api-gateway
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Pods
+      pods:
+        metric:
+          name: active_connections
+        target:
+          type: AverageValue
+          averageValue: "100"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+      selectPolicy: Min
+
+---
+# Horizontal Pod Autoscaler for Console
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wildfire-console-hpa
+  namespace: wildfire-ops
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wildfire-console
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+---
+# Pod Disruption Budget for API Gateway
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: wildfire-api-gateway-pdb
+  namespace: wildfire-ops
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: wildfire-api-gateway
+
+---
+# Pod Disruption Budget for Console
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: wildfire-console-pdb
+  namespace: wildfire-ops
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: wildfire-console
+
+---
+# Network Policy for load balancer traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: wildfire-lb-network-policy
+  namespace: wildfire-ops
+spec:
+  podSelector:
+    matchLabels:
+      tier: backend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+        - namespaceSelector:
+            matchLabels:
+              name: wildfire-ops
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 9000
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: wildfire-ops
+      ports:
+        - protocol: TCP
+          port: 5432  # PostgreSQL
+        - protocol: TCP
+          port: 6379  # Redis
+        - protocol: TCP
+          port: 1883  # MQTT
+
+---
+# Ingress Controller Configuration
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wildfire-ingress
+  namespace: wildfire-ops
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+    - hosts:
+        - api.wildfire-ops.com
+        - console.wildfire-ops.com
+      secretName: wildfire-tls
+  rules:
+    - host: api.wildfire-ops.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wildfire-api-gateway-lb
+                port:
+                  number: 80
+    - host: console.wildfire-ops.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wildfire-console-lb
+                port:
+                  number: 80
+
+---
+# Vertical Pod Autoscaler for resource optimization
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: wildfire-api-gateway-vpa
+  namespace: wildfire-ops
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wildfire-api-gateway
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: api-gateway
+        minAllowed:
+          cpu: 100m
+          memory: 128Mi
+        maxAllowed:
+          cpu: 2
+          memory: 4Gi
+        controlledResources: ["cpu", "memory"]
