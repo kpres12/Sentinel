@@ -194,6 +194,32 @@ class Integration(Base):
     )
 
 
+class Mission(Base):
+    """Missions for coordinated operations."""
+    __tablename__ = "missions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    mission_id = Column(String(100), unique=True, nullable=False, index=True)
+    type = Column(String(50), nullable=False)
+    priority = Column(String(20), default="medium")
+    description = Column(Text)
+    status = Column(String(20), default="pending")  # proposed, pending, active, completed, failed
+    lat = Column(Float, nullable=False)
+    lng = Column(Float, nullable=False)
+    radius = Column(Float, default=200.0)
+    waypoints = Column(JSONB)
+    assets = Column(JSONB)
+    progress = Column(Integer, default=0)
+    estimated_duration = Column(Integer)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index('idx_missions_status', 'status'),
+        Index('idx_missions_created_at', 'created_at'),
+    )
+
+
 class Task(Base):
     """Task assignments to devices."""
     __tablename__ = "tasks"

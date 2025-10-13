@@ -56,6 +56,40 @@ services:
       timeout: 10s
       retries: 3
 
+  # Mission Dispatcher (auto-dispatch swarm on alerts)
+mission-dispatcher:
+    build:
+      context: ../../
+      dockerfile: apps/mission-dispatcher/Dockerfile
+    container_name: wildfire-mission-dispatcher
+    environment:
+      MQTT_URL: mqtt://emqx:1883
+      ALERTS_TOPIC: wildfire/alerts
+      TRIANGULATION_TOPIC: wildfire/triangulations
+      DISPATCHER_MISSIONS_TOPIC: missions/updates
+      SUMMIT_API_URL: http://apigw:8000
+      SUMMIT_API_KEY: ${SUMMIT_API_KEY}
+      DISPATCHER_MIN_CONFIDENCE: 0.8
+      DISPATCHER_REQUIRE_CONFIRM: ${DISPATCHER_REQUIRE_CONFIRM:-false}
+      DISPATCHER_ASSETS: drone-001,drone-002
+      DISPATCHER_LOITER_RADIUS_M: 200
+      DISPATCHER_ALT_M: 120
+      # Policy gates
+      GEOFENCE_BBOX: "-180,-90,180,90"
+      WX_MAX_WIND_MPS: 12
+      WX_MIN_VIS_KM: 1
+      DISPATCHER_HEALTH_PORT: 8089
+    depends_on:
+      emqx:
+        condition: service_healthy
+      apigw:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:8089/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
   # API Gateway
   apigw:
     build:
@@ -80,10 +114,10 @@ services:
         condition: service_healthy
     volumes:
       - ../../apps/apigw:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   # Console (Next.js)
-  console:
+console:
     build:
       context: ../../apps/console
       dockerfile: Dockerfile
@@ -99,6 +133,11 @@ services:
       - ../../apps/console:/app
       - /app/node_modules
     command: npm run dev
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   # Edge Agent (Mock)
   edge-agent:
@@ -207,6 +246,11 @@ services:
       ACOUSTIC_ARRAY_ENABLED: true
       ACOUSTIC_MICROPHONES: 4
       ACOUSTIC_DETECTION_THRESHOLD: 0.6
+      # Model configuration for ONNX
+      SENTRY_MODEL_PATH: apps/sentry-tower/models/smoke_detection.onnx
+      SENTRY_CONF_THRESHOLD: 0.80
+      SENTRY_NMS_THRESHOLD: 0.45
+      SENTRY_FRAME_STRIDE: 3
       SUMMIT_API_URL: https://api.summit-os.bigmt.ai
       SUMMIT_API_KEY: ${SUMMIT_API_KEY}
       SUMMIT_VIDEO_STREAMING: true

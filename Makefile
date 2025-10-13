@@ -54,6 +54,15 @@ docker-down:
 	@echo "Stopping Docker development environment..."
 	docker-compose -f infra/docker/docker-compose.dev.yml down
 
+# Tail logs for key services
+logs-dispatcher:
+	@echo "Tailing mission-dispatcher logs..."
+	docker-compose -f infra/docker/docker-compose.dev.yml logs -f mission-dispatcher
+
+logs-console:
+	@echo "Tailing console logs..."
+	docker-compose -f infra/docker/docker-compose.dev.yml logs -f console
+
 # Run database migrations
 db-migrate:
 	@echo "Running database migrations..."

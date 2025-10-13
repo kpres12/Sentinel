@@ -54,7 +54,7 @@ export interface SummitTelemetry {
 export interface SummitMission {
   id: string
   type: 'surveillance' | 'firefighting' | 'rescue' | 'patrol'
-  status: 'pending' | 'active' | 'completed' | 'failed'
+  status: 'proposed' | 'pending' | 'active' | 'completed' | 'failed'
   priority: 'low' | 'medium' | 'high' | 'critical'
   assignedDevice?: string
   location: {
@@ -95,12 +95,36 @@ class SummitClient {
   private maxReconnectAttempts = 5
 
   constructor() {
-    this.apiUrl = process.env.NEXT_PUBLIC_SUMMIT_API_URL || 'http://localhost:8000/api'
-    this.mqttUrl = process.env.NEXT_PUBLIC_SUMMIT_MQTT_URL || 'ws://localhost:1883'
+    this.apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    this.mqttUrl = process.env.NEXT_PUBLIC_MQTT_WS_URL || 'ws://localhost:8083/mqtt'
     this.apiKey = process.env.NEXT_PUBLIC_SUMMIT_API_KEY || 'dev_key_placeholder'
   }
 
   // REST API Methods
+  async createMission(input: { type?: string; priority?: string; location: { lat: number; lng: number; radius?: number }; waypoints?: any[]; assets?: string[]; description?: string }): Promise<SummitMission | null> {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/v1/missions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: input.type || 'surveillance',
+          priority: input.priority || 'medium',
+          location: input.location,
+          waypoints: input.waypoints,
+          assets: input.assets,
+          description: input.description || 'APPROVED: RECON DISPATCH'
+        })
+      })
+      if (!response.ok) return null
+      return await response.json()
+    } catch (e) {
+      console.error('Error creating mission:', e)
+      return null
+    }
+  }
   async getAlerts(): Promise<SummitAlert[]> {
     try {
       const response = await fetch(`${this.apiUrl}/v1/intelligence/alerts`, {
@@ -222,7 +246,11 @@ class SummitClient {
   async connectMQTT(): Promise<boolean> {
     return new Promise((resolve) => {
       try {
-        this.mqttClient = new Client(this.mqttUrl.replace('ws://', '').replace('wss://', ''), 8083, 'fireline-console')
+        const url = new URL(this.mqttUrl)
+        const host = url.hostname
+        const port = Number(url.port) || (url.protocol === 'wss:' ? 443 : 80)
+        const path = url.pathname && url.pathname.length > 0 ? url.pathname : '/mqtt'
+        this.mqttClient = new Client(host, port, path, 'fireline-console')
         
         this.mqttClient.onConnectionLost = (responseObject) => {
           console.log('MQTT connection lost:', responseObject.errorMessage)
@@ -278,6 +306,24 @@ class SummitClient {
       window.dispatchEvent(event)
     } catch (error) {
       console.error('Error parsing MQTT message:', error)
+    }
+  }
+
+  async updateMission(id: string, patch: Partial<Pick<SummitMission, 'status' | 'progress' | 'description' | 'estimatedDuration'>>): Promise<SummitMission | null> {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/v1/missions/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(patch)
+      })
+      if (!response.ok) return null
+      return await response.json()
+    } catch (e) {
+      console.error('Error updating mission:', e)
+      return null
     }
   }
 
