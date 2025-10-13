@@ -21,7 +21,7 @@ import { useSummitMissions } from '../../hooks/useSummit'
 import { format } from 'date-fns'
 
 export function MissionsPanel() {
-  const { missions, isLoading, isConnected, dispatchRobot, isDispatching } = useSummitMissions()
+  const { missions, isLoading, isConnected, dispatchRobot, isDispatching, approveMission, isApproving, updateMission, isUpdating } = useSummitMissions()
   const [selectedMission, setSelectedMission] = useState<string | null>(null)
 
   const getMissionIcon = (type: string) => {
@@ -47,6 +47,7 @@ export function MissionsPanel() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'text-tacticalGreen-400'
+      case 'proposed': return 'text-warning-400'
       case 'pending': return 'text-warning-400'
       case 'completed': return 'text-tactical-400'
       case 'failed': return 'text-fire-400'
@@ -57,6 +58,7 @@ export function MissionsPanel() {
   const getStatusBg = (status: string) => {
     switch (status) {
       case 'active': return 'bg-tacticalGreen-500/20 border-tacticalGreen-500/30'
+      case 'proposed': return 'bg-warning-500/20 border-warning-500/30'
       case 'pending': return 'bg-warning-500/20 border-warning-500/30'
       case 'completed': return 'bg-tactical-500/20 border-tactical-500/30'
       case 'failed': return 'bg-fire-500/20 border-fire-500/30'
@@ -231,6 +233,24 @@ export function MissionsPanel() {
                       <span>UPDATED: {format(new Date(mission.updatedAt), 'HH:mm:ss')}</span>
                     </div>
                     <div className="flex items-center gap-1">
+                      {mission.status === 'proposed' && (
+                        <button
+                          onClick={() => approveMission(mission)}
+                          disabled={isApproving}
+                          className="px-2 py-1 rounded bg-warning-600/30 hover:bg-warning-600/40 text-xs font-mono"
+                        >
+                          APPROVE
+                        </button>
+                      )}
+                      {(mission.status === 'pending' || mission.status === 'active') && (
+                        <button
+                          onClick={() => updateMission({ id: mission.id, patch: { status: 'completed', progress: 100 } })}
+                          disabled={isUpdating}
+                          className="px-2 py-1 rounded bg-tacticalGreen-600/30 hover:bg-tacticalGreen-600/40 text-xs font-mono"
+                        >
+                          MARK COMPLETED
+                        </button>
+                      )}
                       <button className="p-1 rounded hover:bg-dark-700 transition-colors">
                         <Eye className="w-3 h-3 text-tactical-400" />
                       </button>

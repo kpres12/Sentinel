@@ -5,6 +5,7 @@
 
 import { SentryTowerAgent, TowerConfig, ThermalCameraConfig, AcousticArrayConfig } from '@bigmt/summit-integration';
 import { Logger } from './Logger';
+import { ModelLoader } from './ModelLoader';
 import { Config } from './Config';
 
 const logger = new Logger('SentryTower');
@@ -52,6 +53,10 @@ async function main() {
         offlineMode: config.get('SUMMIT_OFFLINE_MODE', 'false') === 'true'
       }
     };
+
+    // Validate model configuration (optional for demos)
+    const modelLoader = new ModelLoader();
+    modelLoader.validate();
 
     // Create and start sentry tower agent
     const sentryTower = new SentryTowerAgent(towerConfig);

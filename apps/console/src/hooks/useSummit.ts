@@ -183,6 +183,29 @@ export function useSummitMissions() {
     }
   }, [initialMissions])
 
+  const approveMission = useMutation({
+    mutationFn: (mission: SummitMission) => summitClient.createMission({
+      type: mission.type,
+      priority: mission.priority,
+      location: mission.location,
+      description: mission.description
+    }),
+    onSuccess: (created) => {
+      if (created) {
+        setMissions(prev => [created, ...prev])
+      }
+    }
+  })
+
+  const updateMission = useMutation({
+    mutationFn: (input: { id: string; patch: Partial<Pick<SummitMission, 'status' | 'progress' | 'description' | 'estimatedDuration'>> }) => summitClient.updateMission(input.id, input.patch),
+    onSuccess: (updated) => {
+      if (updated) {
+        setMissions(prev => prev.map(m => m.id === updated.id ? updated : m))
+      }
+    }
+  })
+
   const dispatchRobot = useMutation({
     mutationFn: (mission: Partial<SummitMission>) => summitClient.dispatchRobot(mission),
     onSuccess: (_, newMission) => {
@@ -196,6 +219,10 @@ export function useSummitMissions() {
     error,
     isConnected,
     dispatchRobot: dispatchRobot.mutate,
+    updateMission: updateMission.mutate,
+    isUpdating: updateMission.isPending,
+    approveMission: approveMission.mutate,
+    isApproving: approveMission.isPending,
     isDispatching: dispatchRobot.isPending
   }
 }

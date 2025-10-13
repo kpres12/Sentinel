@@ -12,7 +12,8 @@ from fastapi.responses import JSONResponse
 import uvicorn
 
 from app.database import engine, Base
-from app.routers import telemetry, detections, alerts, triangulation, prediction, integrations
+from app.routers import telemetry
+from app.routers import missions as missions_router
 from app.middleware import LoggingMiddleware, MetricsMiddleware
 from app.config import settings
 
@@ -68,6 +69,7 @@ app.add_middleware(MetricsMiddleware)
 
 # Include routers
 app.include_router(telemetry.router, prefix="/api/v1/telemetry", tags=["telemetry"])
+app.include_router(missions_router.router, prefix="/api/v1/missions", tags=["missions"])
 app.include_router(detections.router, prefix="/api/v1/detections", tags=["detections"])
 app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["alerts"])
 app.include_router(triangulation.router, prefix="/api/v1/triangulation", tags=["triangulation"])
