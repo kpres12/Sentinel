@@ -127,7 +127,7 @@ class SummitClient {
   }
   async getAlerts(): Promise<SummitAlert[]> {
     try {
-      const response = await fetch(`${this.apiUrl}/v1/intelligence/alerts`, {
+      const response = await fetch(`${this.apiUrl}/api/v1/intelligence/alerts`, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
@@ -147,7 +147,7 @@ class SummitClient {
 
   async acknowledgeAlert(alertId: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.apiUrl}/v1/alerts/${alertId}/ack`, {
+      const response = await fetch(`${this.apiUrl}/api/v1/alerts/${alertId}/ack`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -164,7 +164,7 @@ class SummitClient {
 
   async getPrediction(scenario: any): Promise<any> {
     try {
-      const response = await fetch(`${this.apiUrl}/v1/predict/scenario`, {
+      const response = await fetch(`${this.apiUrl}/api/v1/predict/scenario`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -186,7 +186,7 @@ class SummitClient {
 
   async dispatchRobot(mission: Partial<SummitMission>): Promise<boolean> {
     try {
-      const response = await fetch(`${this.apiUrl}/v1/task/assign`, {
+      const response = await fetch(`${this.apiUrl}/api/v1/task/assign`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -204,7 +204,7 @@ class SummitClient {
 
   async getActiveMissions(): Promise<SummitMission[]> {
     try {
-      const response = await fetch(`${this.apiUrl}/v1/tasks/active`, {
+      const response = await fetch(`${this.apiUrl}/api/v1/tasks/active`, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
@@ -224,7 +224,7 @@ class SummitClient {
 
   async getSystemStatus(): Promise<SummitSystemStatus | null> {
     try {
-      const response = await fetch(`${this.apiUrl}/v1/system/health`, {
+      const response = await fetch(`${this.apiUrl}/api/v1/system/health`, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
@@ -240,6 +240,46 @@ class SummitClient {
       console.error('Error fetching system status:', error)
       return null
     }
+  }
+
+  // Asset APIs
+  async registerNode(input: {
+    id: string
+    type: 'TOWER' | 'DRONE' | 'UGV' | string
+    pubkey: string
+    fw_version: string
+    location: { lat: number; lon: number; elev_m?: number }
+    capabilities?: string[]
+    comm?: string[]
+  }): Promise<any> {
+    const res = await fetch(`${this.apiUrl}/api/v1/nodes/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(input)
+    })
+    if (!res.ok) throw new Error(`Register failed: ${res.status}`)
+    return res.json()
+  }
+
+  async retireNode(id: string): Promise<void> {
+    const res = await fetch(`${this.apiUrl}/api/v1/nodes/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    })
+    if (!res.ok) throw new Error(`Retire failed: ${res.status}`)
+  }
+
+  async getNode(id: string): Promise<any> {
+    const res = await fetch(`${this.apiUrl}/api/v1/nodes/${encodeURIComponent(id)}`)
+    if (!res.ok) throw new Error(`Get node failed: ${res.status}`)
+    return res.json()
+  }
+
+  async getCoverage(): Promise<{ features: any[] }> {
+    const res = await fetch(`${this.apiUrl}/api/v1/coverage`)
+    if (!res.ok) throw new Error(`Coverage fetch failed: ${res.status}`)
+    return res.json()
   }
 
   // MQTT Connection Methods
