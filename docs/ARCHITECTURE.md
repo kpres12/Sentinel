@@ -2,7 +2,7 @@
 
 ## System Architecture
 
-The Wildfire Operations Platform is designed as a microservices-based system with clear separation of concerns and scalable components.
+The Sentinel Operations Platform is designed as a microservices-based system with clear separation of concerns and scalable components.
 
 ### High-Level Architecture
 

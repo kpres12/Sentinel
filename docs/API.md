@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Wildfire Operations Platform provides a comprehensive REST API for managing wildfire operations, including telemetry data, detections, alerts, triangulation, and fire spread prediction.
+The Sentinel Operations Platform provides a comprehensive REST API for managing sentinel operations, including telemetry data, detections, alerts, triangulation, and fire spread prediction.
 
 ## Base URL
 

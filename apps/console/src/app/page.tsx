@@ -59,7 +59,7 @@ function HomePageContent() {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Wildfire Operations Map</title>
+          <title>Sentinel Operations Map</title>
           <script src="https://cdn.tailwindcss.com"></script>
           <style>
             body { margin: 0; padding: 0; background: #0f0f0f; color: #e5e5e5; font-family: 'JetBrains Mono', monospace; }
@@ -95,7 +95,7 @@ function HomePageContent() {
                       <span class="text-white text-lg">🔥</span>
                     </div>
                     <div>
-                      <h1 class="text-xl font-bold text-tactical-400">BIGMT.AI FIRELINE</h1>
+                      <h1 class="text-xl font-bold text-tactical-400">BIGMT.AI SENTINEL</h1>
                       <p class="text-sm text-tactical-muted">INTELLIGENCE PLATFORM</p>
                     </div>
                   </div>
@@ -215,7 +215,7 @@ function HomePageContent() {
                     <Flame className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-lg font-bold text-tactical-400">WILDFIRE OPS</h1>
+                    <h1 className="text-lg font-bold text-tactical-400">SENTINEL OPS</h1>
                   </div>
                 </div>
             </div>
@@ -529,7 +529,7 @@ function HomePageContent() {
                     {/* Map Title */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                       <div className="text-center">
-                        <h2 className="text-2xl font-bold text-white/80 mb-2 drop-shadow-lg">WILDFIRE OPERATIONS MAP</h2>
+                        <h2 className="text-2xl font-bold text-white/80 mb-2 drop-shadow-lg">SENTINEL OPERATIONS MAP</h2>
                         <p className="text-sm text-white/60 font-mono">SECTOR 7 - ACTIVE FIRE DETECTED</p>
                       </div>
                     </div>
