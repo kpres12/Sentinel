@@ -1,6 +1,6 @@
-# Wildfire Operations Platform
+# Sentinel Operations Platform
 
-A production-ready monorepo for a wildfire operations platform that coordinates mobile KOFA robots + FireFly drones, fuses multi-modal data, triangulates smoke, predicts spread, and plugs into firefighter workflows.
+A production-ready monorepo for a sentinel operations platform that coordinates mobile KOFA robots + FireFly drones, fuses multi-modal data, triangulates smoke, predicts spread, and plugs into firefighter workflows.
 
 ## 🚀 Quick Start
 
