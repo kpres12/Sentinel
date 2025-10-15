@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { 
   Plane, 
   Radio, 
@@ -17,18 +17,39 @@ import {
   RotateCcw,
   Zap,
   Eye,
-  Shield
+  Shield,
+  Trash2
 } from 'lucide-react'
 import { useSummitTelemetry } from '../../hooks/useSummit'
 import { format } from 'date-fns'
+import { summitClient } from '../../lib/summitClient'
+import { assetStore } from '../../store/assetStore'
+import { useToast } from '../ui/Toast'
 
 export function DevicesPanel() {
-  const { telemetry, isConnected, deviceCount } = useSummitTelemetry()
+  const { telemetry, isConnected } = useSummitTelemetry()
+  const { show } = useToast()
+  const [retired, setRetired] = useState<Set<string>>(new Set())
+  const [statuses, setStatuses] = useState<Record<string, 'ONLINE' | 'STALE' | 'OFFLINE'>>({})
+  const [showAdd, setShowAdd] = useState(false)
+  const [newTower, setNewTower] = useState({ id: '', pubkey: '', fw: '1.0.0', lat: '', lon: '', elev: '', capabilities: 'THERMAL,EO', comm: 'LTE' })
+
+  useEffect(() => {
+    assetStore.connectWS()
+    assetStore.startTimers()
+    const unsub = assetStore.subscribe((s) => {
+      const next: Record<string, 'ONLINE' | 'STALE' | 'OFFLINE'> = {}
+      Object.values(s.assets).forEach(a => { if (!a.retired) next[a.id] = a.status })
+      setStatuses(next)
+    })
+    return () => { unsub() }
+  }, [])
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'online': return 'text-tacticalGreen-400'
       case 'offline': return 'text-fire-400'
+      case 'stale': return 'text-warning-400'
       case 'error': return 'text-fire-400'
       case 'mission': return 'text-tactical-400'
       default: return 'text-tactical-400'
@@ -36,9 +57,10 @@ export function DevicesPanel() {
   }
 
   const getStatusBg = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'online': return 'bg-tacticalGreen-500/20 border-tacticalGreen-500/30'
       case 'offline': return 'bg-fire-500/20 border-fire-500/30'
+      case 'stale': return 'bg-yellow-500/20 border-yellow-500/30'
       case 'error': return 'bg-fire-500/20 border-fire-500/30'
       case 'mission': return 'bg-tactical-500/20 border-tactical-500/30'
       default: return 'bg-tactical-500/20 border-tactical-500/30'
@@ -50,13 +72,16 @@ export function DevicesPanel() {
     return deviceId.includes('drone') || deviceId.includes('surveillance') ? Plane : Radio
   }
 
+  // Filter active devices (exclude retired)
+  const activeTelemetry = useMemo(() => telemetry.filter(t => !retired.has(t.deviceId)), [telemetry, retired])
+
   // Calculate fleet summary from telemetry data
   const fleetSummary = {
-    online: telemetry.filter(t => t.status === 'online').length,
-    offline: telemetry.filter(t => t.status === 'offline').length,
-    error: telemetry.filter(t => t.status === 'error').length,
-    avgBattery: telemetry.length > 0 
-      ? Math.round(telemetry.reduce((sum, t) => sum + t.battery, 0) / telemetry.length)
+    online: Object.values(statuses).filter(s => s === 'ONLINE').length,
+    offline: Object.values(statuses).filter(s => s === 'OFFLINE').length,
+    error: 0,
+    avgBattery: activeTelemetry.length > 0 
+      ? Math.round(activeTelemetry.reduce((sum, t) => sum + t.battery, 0) / activeTelemetry.length)
       : 0
   }
 
@@ -64,19 +89,81 @@ export function DevicesPanel() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="tactical-header px-4 py-3 border-b border-dark-700">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="tactical-title text-lg">DEVICE FLEET</h2>
-            <p className="text-xs text-tactical-muted font-mono">WILDFIRE OPS COMMAND</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="tactical-title text-lg">DEVICE FLEET</h2>
+              <p className="text-xs text-tactical-muted font-mono">WILDFIRE OPS COMMAND</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowAdd(v => !v)} className="px-3 py-2 rounded bg-tacticalGreen-600 text-white text-xs">Add Tower</button>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-tacticalGreen-400' : 'bg-fire-400'}`}></div>
+              <span className="text-xs font-mono text-tactical-muted">
+                {isConnected ? 'SUMMIT.OS CONNECTED' : 'SUMMIT.OS OFFLINE'}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-tacticalGreen-400' : 'bg-fire-400'}`}></div>
-            <span className="text-xs font-mono text-tactical-muted">
-              {isConnected ? 'SUMMIT.OS CONNECTED' : 'SUMMIT.OS OFFLINE'}
-            </span>
-          </div>
-        </div>
       </div>
+
+      {showAdd && (
+        <div className="p-4 border-b border-dark-800 bg-dark-900">
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              try {
+                await summitClient.registerNode({
+                  id: newTower.id,
+                  type: 'TOWER',
+                  pubkey: newTower.pubkey,
+                  fw_version: newTower.fw,
+                  location: { lat: Number(newTower.lat), lon: Number(newTower.lon), elev_m: newTower.elev ? Number(newTower.elev) : undefined },
+                  capabilities: newTower.capabilities.split(',').map(s=>s.trim()).filter(Boolean),
+                  comm: newTower.comm.split(',').map(s=>s.trim()).filter(Boolean)
+                })
+                try {
+                  await assetStore.refreshCoverage()
+                } catch {}
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('zoom-to', { detail: { lat: Number(newTower.lat), lon: Number(newTower.lon), zoom: 12 } }))
+                }
+                show({ title: 'Tower accepted', description: newTower.id, variant: 'success' })
+                setShowAdd(false)
+              } catch (e) {
+                show({ title: 'Failed to register tower', description: String(e), variant: 'error' })
+              }
+            }}
+            className="grid grid-cols-7 gap-2 items-end"
+          >
+            <div>
+              <label className="block text-[10px] font-mono text-tactical-muted">ID</label>
+              <input value={newTower.id} onChange={e=>setNewTower({...newTower,id:e.target.value})} className="w-full p-1 rounded bg-dark-800 text-tactical-200 text-xs" required />
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono text-tactical-muted">PubKey</label>
+              <input value={newTower.pubkey} onChange={e=>setNewTower({...newTower,pubkey:e.target.value})} className="w-full p-1 rounded bg-dark-800 text-tactical-200 text-xs" required />
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono text-tactical-muted">Lat</label>
+              <input value={newTower.lat} onChange={e=>setNewTower({...newTower,lat:e.target.value})} className="w-full p-1 rounded bg-dark-800 text-tactical-200 text-xs" required />
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono text-tactical-muted">Lon</label>
+              <input value={newTower.lon} onChange={e=>setNewTower({...newTower,lon:e.target.value})} className="w-full p-1 rounded bg-dark-800 text-tactical-200 text-xs" required />
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono text-tactical-muted">Elev(m)</label>
+              <input value={newTower.elev} onChange={e=>setNewTower({...newTower,elev:e.target.value})} className="w-full p-1 rounded bg-dark-800 text-tactical-200 text-xs" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono text-tactical-muted">Caps</label>
+              <input value={newTower.capabilities} onChange={e=>setNewTower({...newTower,capabilities:e.target.value})} className="w-full p-1 rounded bg-dark-800 text-tactical-200 text-xs" />
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" className="px-3 py-2 rounded bg-tacticalGreen-600 text-white text-xs">Submit</button>
+              <button type="button" onClick={()=>setShowAdd(false)} className="px-3 py-2 rounded bg-dark-800 text-tactical-300 text-xs">Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto tactical-scrollbar p-4 space-y-4">
         {/* Fleet Summary */}
@@ -113,7 +200,7 @@ export function DevicesPanel() {
 
         {/* Devices List */}
         <div className="space-y-3">
-          {telemetry.length === 0 ? (
+          {activeTelemetry.length === 0 ? (
             <div className="tactical-panel p-4 rounded-lg text-center">
               <div className="flex items-center justify-center gap-2">
                 <Radio className="w-4 h-4 text-tactical-400" />
@@ -121,10 +208,10 @@ export function DevicesPanel() {
               </div>
             </div>
           ) : (
-            telemetry.map((device) => {
+            activeTelemetry.map((device) => {
               const DeviceIcon = getDeviceIcon(device.deviceId)
               return (
-                <div key={device.deviceId} className={`tactical-panel p-4 rounded-lg border ${getStatusBg(device.status)}`}>
+                <div key={device.deviceId} className={`tactical-panel p-4 rounded-lg border ${getStatusBg(statuses[device.deviceId] || device.status)}`}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-3">
                       <DeviceIcon className={`w-5 h-5 ${getStatusColor(device.status)} mt-0.5`} />
@@ -134,8 +221,8 @@ export function DevicesPanel() {
                           {device.mission ? device.mission.type.toUpperCase() : 'STANDBY'}
                         </p>
                         <div className="flex items-center gap-4 text-xs font-mono">
-                          <span className="text-tactical-muted">STATUS: {device.status.toUpperCase()}</span>
-                          <span className={`${getStatusColor(device.status)}`}>
+                          <span className="text-tactical-muted">STATUS: {(statuses[device.deviceId] || device.status).toUpperCase()}</span>
+                          <span className={`${getStatusColor(statuses[device.deviceId] || device.status)}`}>
                             {device.mission ? 'ON MISSION' : 'STANDBY'}
                           </span>
                         </div>
@@ -236,6 +323,22 @@ export function DevicesPanel() {
                       </button>
                       <button className="p-1 rounded hover:bg-dark-700 transition-colors">
                         <Settings className="w-3 h-3 text-tactical-400" />
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await summitClient.retireNode(device.deviceId)
+                            setRetired(prev => new Set(prev).add(device.deviceId))
+                            assetStore.markRetired(device.deviceId)
+                            show({ title: 'Asset retired', description: device.deviceId, variant: 'success' })
+                          } catch (e) {
+                            show({ title: 'Failed to retire asset', description: String(e), variant: 'error' })
+                          }
+                        }}
+                        className="p-1 rounded hover:bg-dark-700 transition-colors"
+                        title="Retire asset"
+                      >
+                        <Trash2 className="w-3 h-3 text-tactical-400" />
                       </button>
                     </div>
                   </div>

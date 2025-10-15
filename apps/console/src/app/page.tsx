@@ -22,7 +22,8 @@ import {
   Menu,
   X,
   Layers,
-  Camera
+  Camera,
+  Settings
 } from 'lucide-react'
 import { AlertsPanel } from '../components/panels/AlertsPanel'
 import { DevicesPanel } from '../components/panels/DevicesPanel'
@@ -30,6 +31,8 @@ import { MissionsPanel } from '../components/panels/MissionsPanel'
 import { DroneControlPanel } from '../components/controls/DroneControlPanel'
 import { KOFAMissionPanel } from '../components/controls/KOFAMissionPanel'
 import { VideoFeedPanel } from '../components/panels/VideoFeedPanel'
+import { SettingsPanel } from '../components/panels/SettingsPanel'
+import { ToastProvider } from '../components/ui/Toast'
 import { useSummitConnection } from '../hooks/useSummit'
 
 const queryClient = new QueryClient()
@@ -193,6 +196,7 @@ function HomePageContent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ToastProvider>
       <div className="min-h-screen bg-dark-950 text-dark-100">
         {/* Tactical Header */}
         <div className="tactical-header border-b border-dark-700 bg-gradient-to-r from-dark-800 to-dark-900">
@@ -363,6 +367,15 @@ function HomePageContent() {
                 >
                   <Radio className="w-5 h-5 text-tactical-400" />
                   <span className="text-sm font-mono text-tactical-300">MISSIONS</span>
+                </button>
+                <button
+                  onClick={() => setActivePanel('settings')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'settings' ? 'bg-tactical-500/20 border border-tactical-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Settings className="w-5 h-5 text-tactical-400" />
+                  <span className="text-sm font-mono text-tactical-300">SETTINGS</span>
                 </button>
                 <button
                   onClick={() => setActivePanel('control')}
@@ -640,6 +653,10 @@ function HomePageContent() {
                   {activePanel === 'alerts' && <AlertsPanel />}
               
                   {activePanel === 'devices' && <DevicesPanel />}
+                  
+                  {activePanel === 'settings' && (
+                    <SettingsPanel />
+                  )}
                   
                   {activePanel === 'risk' && (
                     <div className="h-full flex flex-col">
@@ -1102,6 +1119,7 @@ function HomePageContent() {
         </div>
         
       </div>
+      </ToastProvider>
     </QueryClientProvider>
   )
 }

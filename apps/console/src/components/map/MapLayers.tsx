@@ -1,7 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Source, Layer } from 'react-map-gl/maplibre'
+import { useSummitTelemetry } from '../../hooks/useSummit'
+import { assetStore } from '../../store/assetStore'
+import { buildIsochrones } from '../../lib/isochrones'
 
 export interface MapLayersProps {
   showTelemetry?: boolean
@@ -10,6 +13,9 @@ export interface MapLayersProps {
   showFireLines?: boolean
   showIsochrones?: boolean
   showCameraFOV?: boolean
+  showCoverage?: boolean
+  showDroneIsochrones?: boolean
+  showUgvIsochrones?: boolean
 }
 
 export function MapLayers({
@@ -18,174 +24,57 @@ export function MapLayers({
   showRiskHeatmap = true,
   showFireLines = true,
   showIsochrones = true,
-  showCameraFOV = true
+  showCameraFOV = true,
+  showCoverage = true,
+  showDroneIsochrones = true,
+  showUgvIsochrones = true
 }: MapLayersProps) {
+  const { telemetry } = useSummitTelemetry()
+  const [coverage, setCoverage] = useState<GeoJSON.FeatureCollection>({ type: 'FeatureCollection', features: [] })
+
+  useEffect(() => {
+    assetStore.connectWS()
+    assetStore.startTimers()
+    const unsub = assetStore.subscribe((s) => {
+      if (s.coverage) setCoverage(s.coverage)
+    })
+    return () => { unsub(); assetStore.stopTimers() }
+  }, [])
+
+  const telemetryPoints = useMemo(() => {
+    return telemetry.map(t => ({
+      type: 'Feature',
+      properties: { id: t.deviceId, type: t.deviceId.toLowerCase().includes('kofa') ? 'robot' : (t.deviceId.toLowerCase().includes('drone') || t.deviceId.toLowerCase().includes('firefly') ? 'drone' : 'unknown'), status: t.status, battery: t.battery, lastSeen: t.timestamp },
+      geometry: { type: 'Point', coordinates: [t.location.lng, t.location.lat] }
+    }))
+  }, [telemetry])
+
+  const droneIso = useMemo(() => {
+    if (!showIsochrones || !showDroneIsochrones) return { type: 'FeatureCollection', features: [] } as any
+    const points = telemetry.filter(t => !t.deviceId.toLowerCase().includes('kofa')).map(t => ({ id: t.deviceId, lon: t.location.lng, lat: t.location.lat, kind: 'drone' as const }))
+    return buildIsochrones({ points, minutes: [5, 10, 15] })
+  }, [telemetry, showIsochrones, showDroneIsochrones])
+
+  const ugvIso = useMemo(() => {
+    if (!showIsochrones || !showUgvIsochrones) return { type: 'FeatureCollection', features: [] } as any
+    const points = telemetry.filter(t => t.deviceId.toLowerCase().includes('kofa')).map(t => ({ id: t.deviceId, lon: t.location.lng, lat: t.location.lat, kind: 'ugv' as const }))
+    return buildIsochrones({ points, minutes: [5, 10, 15] })
+  }, [telemetry, showIsochrones, showUgvIsochrones])
+
   return (
     <>
-      {/* Telemetry trails */}
+      {/* Tower detection coverage */}
+      {showCoverage && coverage.features.length > 0 && (
+        <Source id="coverage" type="geojson" data={coverage}>
+          <Layer id="coverage-fill" type="fill" paint={{ 'fill-color': '#22c55e', 'fill-opacity': 0.25 }} />
+          <Layer id="coverage-outline" type="line" paint={{ 'line-color': '#16a34a', 'line-width': 1.5, 'line-opacity': 0.8 }} />
+          <Layer id="coverage-label" type="symbol" layout={{ 'text-field': ['coalesce', ['get', 'id'], ['get', 'name']], 'text-size': 12 }} paint={{ 'text-color': '#166534', 'text-halo-color': '#ffffff', 'text-halo-width': 1 }} />
+        </Source>
+      )}
+
+      {/* Telemetry points (dynamic) */}
       {showTelemetry && (
-        <Source
-          id="telemetry"
-          type="geojson"
-          data={{
-            type: 'FeatureCollection',
-            features: [
-              // FireWatch Towers (Fixed positions)
-              {
-                type: 'Feature',
-                properties: {
-                  id: 'firewatch-alpha',
-                  name: 'FireWatch Alpha',
-                  type: 'tower',
-                  status: 'online',
-                  battery: 95,
-                  lastSeen: '14:32:15'
-                },
-                geometry: {
-                  type: 'Point',
-                  coordinates: [-120.0, 40.0]
-                }
-              },
-              {
-                type: 'Feature',
-                properties: {
-                  id: 'firewatch-bravo',
-                  name: 'FireWatch Bravo',
-                  type: 'tower',
-                  status: 'online',
-                  battery: 88,
-                  lastSeen: '14:32:10'
-                },
-                geometry: {
-                  type: 'Point',
-                  coordinates: [-119.95, 40.05]
-                }
-              },
-              {
-                type: 'Feature',
-                properties: {
-                  id: 'firewatch-charlie',
-                  name: 'FireWatch Charlie',
-                  type: 'tower',
-                  status: 'online',
-                  battery: 92,
-                  lastSeen: '14:32:08'
-                },
-                geometry: {
-                  type: 'Point',
-                  coordinates: [-120.05, 39.95]
-                }
-              },
-              // FireFly Drones (Mobile positions)
-              {
-                type: 'Feature',
-                properties: {
-                  id: 'firefly-alpha',
-                  name: 'FireFly Alpha',
-                  type: 'drone',
-                  status: 'online',
-                  battery: 87,
-                  altitude: 1200,
-                  lastSeen: '14:32:12'
-                },
-                geometry: {
-                  type: 'Point',
-                  coordinates: [-120.01, 40.01]
-                }
-              },
-              {
-                type: 'Feature',
-                properties: {
-                  id: 'firefly-bravo',
-                  name: 'FireFly Bravo',
-                  type: 'drone',
-                  status: 'online',
-                  battery: 92,
-                  altitude: 1500,
-                  lastSeen: '14:32:14'
-                },
-                geometry: {
-                  type: 'Point',
-                  coordinates: [-119.98, 40.03]
-                }
-              },
-              {
-                type: 'Feature',
-                properties: {
-                  id: 'firefly-charlie',
-                  name: 'FireFly Charlie',
-                  type: 'drone',
-                  status: 'mission',
-                  battery: 78,
-                  altitude: 800,
-                  lastSeen: '14:32:16'
-                },
-                geometry: {
-                  type: 'Point',
-                  coordinates: [-120.02, 39.98]
-                }
-              },
-              // KOFA Bots (Ground positions)
-              {
-                type: 'Feature',
-                properties: {
-                  id: 'kofa-alpha',
-                  name: 'KOFA Alpha',
-                  type: 'robot',
-                  status: 'online',
-                  battery: 87,
-                  speed: 12,
-                  lastSeen: '14:32:15'
-                },
-                geometry: {
-                  type: 'Point',
-                  coordinates: [-120.005, 40.005]
-                }
-              },
-              {
-                type: 'Feature',
-                properties: {
-                  id: 'kofa-bravo',
-                  name: 'KOFA Bravo',
-                  type: 'robot',
-                  status: 'mission',
-                  battery: 65,
-                  speed: 8,
-                  lastSeen: '14:32:13'
-                },
-                geometry: {
-                  type: 'Point',
-                  coordinates: [-119.99, 40.02]
-                }
-              },
-              {
-                type: 'Feature',
-                properties: {
-                  id: 'kofa-charlie',
-                  name: 'KOFA Charlie',
-                  type: 'robot',
-                  status: 'offline',
-                  battery: 0,
-                  speed: 0,
-                  lastSeen: '14:28:42'
-                },
-                geometry: {
-                  type: 'Point',
-                  coordinates: [-120.03, 39.97]
-                }
-              }
-            ]
-          }}
-        >
-          <Layer
-            id="telemetry-trails"
-            type="line"
-            paint={{
-              'line-color': '#3b82f6',
-              'line-width': 2,
-              'line-opacity': 0.8
-            }}
-          />
+        <Source id="telemetry" type="geojson" data={{ type: 'FeatureCollection', features: telemetryPoints as any }}>
           <Layer
             id="telemetry-points"
             type="circle"
@@ -392,49 +281,19 @@ export function MapLayers({
         </Source>
       )}
 
-      {/* Isochrones */}
-      {showIsochrones && (
-        <Source
-          id="isochrones"
-          type="geojson"
-          data={{
-            type: 'FeatureCollection',
-            features: []
-          }}
-        >
-          <Layer
-            id="isochrones-fill"
-            type="fill"
-            paint={{
-              'fill-color': [
-                'interpolate',
-                ['linear'],
-                ['get', 'hours'],
-                0, '#ffff00',
-                6, '#ff8800',
-                12, '#ff4400',
-                24, '#cc0000'
-              ],
-              'fill-opacity': 0.3
-            }}
-          />
-          <Layer
-            id="isochrones-line"
-            type="line"
-            paint={{
-              'line-color': [
-                'interpolate',
-                ['linear'],
-                ['get', 'hours'],
-                0, '#ffff00',
-                6, '#ff8800',
-                12, '#ff4400',
-                24, '#cc0000'
-              ],
-              'line-width': 2,
-              'line-opacity': 0.8
-            }}
-          />
+      {/* Isochrones - Drones */}
+      {showIsochrones && showDroneIsochrones && (
+        <Source id="isochrones-drones" type="geojson" data={droneIso}>
+          <Layer id="isochrones-drones-fill" type="fill" paint={{ 'fill-color': '#22c55e', 'fill-opacity': 0.15 }} />
+          <Layer id="isochrones-drones-line" type="line" paint={{ 'line-color': '#16a34a', 'line-width': 1.5, 'line-opacity': 0.8 }} />
+        </Source>
+      )}
+
+      {/* Isochrones - UGVs */}
+      {showIsochrones && showUgvIsochrones && (
+        <Source id="isochrones-ugvs" type="geojson" data={ugvIso}>
+          <Layer id="isochrones-ugvs-fill" type="fill" paint={{ 'fill-color': '#60a5fa', 'fill-opacity': 0.12 }} />
+          <Layer id="isochrones-ugvs-line" type="line" paint={{ 'line-color': '#3b82f6', 'line-width': 1.5, 'line-opacity': 0.8 }} />
         </Source>
       )}
 
