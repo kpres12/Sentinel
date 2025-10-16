@@ -44,10 +44,16 @@ export class MQTTClient {
             reject(error)
           },
           useSSL: this.config.mqttUseSSL,
-          userName: this.config.mqttUsername || undefined,
-          password: this.config.mqttPassword || undefined,
           keepAliveInterval: 60,
           cleanSession: true
+        }
+
+        // Add authentication only if credentials are provided
+        if (this.config.mqttUsername) {
+          options.userName = this.config.mqttUsername
+        }
+        if (this.config.mqttPassword) {
+          options.password = this.config.mqttPassword
         }
 
         // Set up message handlers
@@ -90,7 +96,7 @@ export class MQTTClient {
     try {
       const mqttMessage = new mqtt.Message(message)
       mqttMessage.destinationName = topic
-      mqttMessage.qos = qos
+      mqttMessage.qos = qos as mqtt.Qos
       mqttMessage.retained = false
 
       this.client.send(mqttMessage)
@@ -108,7 +114,7 @@ export class MQTTClient {
     }
 
     try {
-      this.client.subscribe(topic, { qos })
+      this.client.subscribe(topic, { qos: qos as mqtt.Qos })
       this.logger.info(`Subscribed to topic ${topic}`)
 
     } catch (error) {

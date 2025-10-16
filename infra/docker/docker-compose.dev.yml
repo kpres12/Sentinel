@@ -156,58 +156,58 @@ console:
       - ../../apps/edge-agent:/app
 
   # Fusion Service
-  fusion:
-    build:
-      context: ../../apps/fusion
-      dockerfile: Dockerfile
-    container_name: wildfire-fusion
-    environment:
-      DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ../../apps/fusion:/app
+  # fusion:
+  #   build:
+  #     context: ../../apps/fusion
+  #     dockerfile: Dockerfile
+  #   container_name: wildfire-fusion
+  #   environment:
+  #     DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
+  #     REDIS_HOST: redis
+  #     REDIS_PORT: 6379
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ../../apps/fusion:/app
 
   # Triangulation Service
-  triangulate:
-    build:
-      context: ../../apps/triangulate
-      dockerfile: Dockerfile
-    container_name: wildfire-triangulate
-    environment:
-      DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ../../apps/triangulate:/app
+  # triangulate:
+  #   build:
+  #     context: ../../apps/triangulate
+  #     dockerfile: Dockerfile
+  #   container_name: wildfire-triangulate
+  #   environment:
+  #     DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
+  #     REDIS_HOST: redis
+  #     REDIS_PORT: 6379
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ../../apps/triangulate:/app
 
   # Prediction Service
-  predict:
-    build:
-      context: ../../apps/predict
-      dockerfile: Dockerfile
-    container_name: wildfire-predict
-    environment:
-      DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ../../apps/predict:/app
+  # predict:
+  #   build:
+  #     context: ../../apps/predict
+  #     dockerfile: Dockerfile
+  #   container_name: wildfire-predict
+  #   environment:
+  #     DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
+  #     REDIS_HOST: redis
+  #     REDIS_PORT: 6379
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ../../apps/predict:/app
 
   # Summit Integration Service
   summit-integration:
