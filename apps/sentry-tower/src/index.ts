@@ -46,6 +46,32 @@ async function main() {
         detectionThreshold: parseFloat(config.get('ACOUSTIC_DETECTION_THRESHOLD', '0.6')),
         windCompensation: config.get('ACOUSTIC_WIND_COMPENSATION', 'true') === 'true'
       },
+      communication: {
+        multiLink: {
+          enabled: true,
+          primaryLink: (config.get('COMM_PRIMARY_LINK', 'radio_mesh') as any),
+          failoverOrder: (config.get('COMM_FAILOVER', 'radio_mesh,cellular,satellite,wifi').split(',') as any),
+          autonomousMode: {
+            enabled: config.get('COMM_AUTONOMOUS_ENABLED', 'true') === 'true',
+            syncInterval: parseInt(config.get('COMM_SYNC_INTERVAL', '300')),
+            bufferSizeMB: parseInt(config.get('COMM_BUFFER_MB', '100')),
+          },
+        },
+        radioMesh: {
+          frequency: (config.get('MESH_FREQ', '900MHz') as any),
+          meshId: config.get('MESH_ID', 'sentinel-fire-mesh'),
+          powerLevel: (config.get('MESH_POWER', 'high') as any),
+          encryption: (config.get('MESH_ENC', 'wpa3') as any),
+        },
+        cellular: {
+          carriers: (config.get('CELL_CARRIERS', 'primary,secondary').split(',')),
+          dataLimitMB: parseInt(config.get('CELL_DATA_LIMIT_MB', '10000')),
+        },
+        satellite: {
+          provider: (config.get('SAT_PROVIDER', 'starlink') as any),
+          backupOnly: config.get('SAT_BACKUP_ONLY', 'true') === 'true',
+        },
+      },
       summitIntegration: {
         apiUrl: config.get('SUMMIT_API_URL', 'https://api.summit-os.bigmt.ai'),
         apiKey: config.get('SUMMIT_API_KEY', ''),
