@@ -8,6 +8,7 @@ export { VideoStreamManager } from './VideoStreamManager';
 export { FireLineBotController } from './FireLineBotController';
 export { SentryTowerAgent } from './SentryTowerAgent';
 export { OfflineManager } from './OfflineManager';
+export * from './communication';
 
 // Re-export types for convenience
 export type {

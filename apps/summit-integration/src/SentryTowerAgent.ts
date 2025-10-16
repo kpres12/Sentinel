@@ -6,6 +6,7 @@
 import { EventEmitter } from 'events';
 import { SummitClient, FireDetection } from './SummitClient';
 import * as sharp from 'sharp';
+import { MultiLinkManager, LinkType, MessagePriority } from './communication';
 
 export interface TowerConfig {
   towerId: string;
@@ -17,6 +18,22 @@ export interface TowerConfig {
   };
   thermalCamera: ThermalCameraConfig;
   acousticArray: AcousticArrayConfig;
+  communication: {
+    multiLink: {
+      enabled: boolean;
+      primaryLink: 'radio_mesh' | 'cellular' | 'satellite' | 'wifi';
+      failoverOrder: Array<'radio_mesh' | 'cellular' | 'satellite' | 'wifi'>;
+      autonomousMode: { enabled: boolean; syncInterval: number; bufferSizeMB: number };
+    };
+    radioMesh: {
+      frequency: '900MHz' | '2.4GHz' | '5GHz';
+      meshId: string;
+      powerLevel: 'low' | 'medium' | 'high';
+      encryption: 'wpa3' | 'none';
+    };
+    cellular: { carriers: ['primary', 'secondary'] | string[]; dataLimitMB: number };
+    satellite: { provider: 'starlink' | string; backupOnly: boolean };
+  };
   summitIntegration: {
     apiUrl: string;
     apiKey: string;
@@ -79,6 +96,7 @@ export interface MultiSensorFusion {
 export class SentryTowerAgent extends EventEmitter {
   private config: TowerConfig;
   private summitClient: SummitClient;
+  private multiLink?: MultiLinkManager;
   private isRunning: boolean = false;
   private detectionHistory: FireDetectionResult[] = [];
   private fusionEngine: MultiSensorFusion;
@@ -105,6 +123,9 @@ export class SentryTowerAgent extends EventEmitter {
     try {
       console.log(`Starting Sentry Tower Agent for tower ${this.config.towerId}`);
       
+      // Initialize multi-link communications
+      this.initializeMultiLink();
+
       // Connect to Summit.OS
       await this.summitClient.connect();
       
@@ -267,25 +288,41 @@ export class SentryTowerAgent extends EventEmitter {
         this.detectionHistory = this.detectionHistory.slice(-1000);
       }
       
-      // Create Summit.OS detection
-      const summitDetection: Omit<FireDetection, 'id'> = {
+      // Prepare alert payload
+      const alert = {
         deviceId: this.config.towerId,
         timestamp: detection.timestamp,
         type: detection.type,
         confidence: detection.confidence,
         position: detection.position,
         bearing: detection.bearing,
-        mediaRef: `tower_${this.config.towerId}_${Date.now()}`,
-        source: 'edge'
+        source: 'edge' as const,
       };
-      
+
+      // 1) Immediate mesh broadcast (<50ms)
+      if (this.multiLink) {
+        await this.multiLink.sendMessage(
+          'sentinel/alerts/fire',
+          alert,
+          MessagePriority.CRITICAL,
+          { preferredLink: LinkType.RADIO_MESH }
+        );
+      }
+
       if (this.offlineMode) {
         // Store for later sync
         this.offlineData.push(detection);
         this.emit('offlineDetection', detection);
       } else {
-        // Report to Summit.OS immediately
-        await this.summitClient.reportFireDetection(summitDetection);
+        // 2) Send to command via best available link (cellular/satellite/wifi)
+        if (this.multiLink) {
+          await this.multiLink.sendMessage('sentinel/alerts/fire/cloud', alert, MessagePriority.CRITICAL);
+        }
+        // Maintain existing Summit.OS reporting path
+        await this.summitClient.reportFireDetection({
+          ...alert,
+          mediaRef: `tower_${this.config.towerId}_${Date.now()}`,
+        });
         this.emit('fireDetection', detection);
       }
       
@@ -325,6 +362,92 @@ export class SentryTowerAgent extends EventEmitter {
     this.summitClient.on('error', (error) => {
       this.emit('summitError', error);
     });
+
+    // Multi-link link status to drive autonomous mode
+    this.on('linkUpdated', () => {
+      if (!this.multiLink) return;
+      const wide = this.multiLink.hasWideAreaConnectivity();
+      if (!wide && !this.offlineMode) {
+        // Enter autonomous mode
+        this.enableOfflineMode();
+      }
+      if (wide && this.offlineMode) {
+        // Exit autonomous mode and trigger flush
+        this.disableOfflineMode();
+        this.multiLink.flushBuffer();
+      }
+    });
+  }
+
+  private initializeMultiLink(): void {
+    if (!this.config.communication?.multiLink?.enabled) return;
+    const ml = new MultiLinkManager({
+      deviceId: this.config.towerId,
+      failoverOrder: this.config.communication.multiLink.failoverOrder.map((t) => t as unknown as LinkType),
+      autonomousMode: {
+        enabled: this.config.communication.multiLink.autonomousMode.enabled,
+        syncIntervalSec: this.config.communication.multiLink.autonomousMode.syncInterval,
+        bufferSizeMB: this.config.communication.multiLink.autonomousMode.bufferSizeMB,
+      },
+    });
+
+    // Seed link states (these would be updated by real adapters/health checks)
+    ml.addOrUpdateLink({
+      type: LinkType.RADIO_MESH,
+      id: this.config.communication.radioMesh.meshId,
+      enabled: true,
+      up: true,
+      preferred: this.config.communication.multiLink.primaryLink === 'radio_mesh',
+      costScore: 1,
+      quality: { latencyMs: 20, throughputKbps: 1000, lossPct: 0.5 },
+    });
+
+    ml.addOrUpdateLink({
+      type: LinkType.CELLULAR,
+      id: 'dual-sim-modem',
+      enabled: true,
+      up: true,
+      preferred: this.config.communication.multiLink.primaryLink === 'cellular',
+      costScore: 5,
+      quality: { latencyMs: 80, throughputKbps: 20000, lossPct: 1.0 },
+    });
+
+    ml.addOrUpdateLink({
+      type: LinkType.SATELLITE,
+      id: this.config.communication.satellite.provider,
+      enabled: true,
+      up: !this.config.communication.satellite.backupOnly, // still available but used as backup
+      preferred: this.config.communication.multiLink.primaryLink === 'satellite',
+      costScore: 9,
+      quality: { latencyMs: 600, throughputKbps: 10000, lossPct: 1.5 },
+    });
+
+    ml.addOrUpdateLink({
+      type: LinkType.WIFI,
+      id: 'wifi-ap',
+      enabled: true,
+      up: true,
+      preferred: this.config.communication.multiLink.primaryLink === 'wifi',
+      costScore: 2,
+      quality: { latencyMs: 30, throughputKbps: 54000, lossPct: 0.5 },
+    });
+
+    ml.setFailoverOrder([
+      LinkType.RADIO_MESH,
+      LinkType.CELLULAR,
+      LinkType.SATELLITE,
+      LinkType.WIFI,
+    ]);
+
+    ml.start();
+
+    // Bubble link events
+    ml.on('linkUpdated', (s) => this.emit('linkUpdated', s));
+    ml.on('sent', (s) => this.emit('linkSent', s));
+    ml.on('buffered', (s) => this.emit('linkBuffered', s));
+    ml.on('flushed', (s) => this.emit('linkFlushed', s));
+
+    this.multiLink = ml;
   }
 }
 
