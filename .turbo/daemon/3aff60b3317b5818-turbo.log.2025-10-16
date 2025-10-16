@@ -1,0 +1,27 @@
+2025-10-16T23:22:06.725497Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf(".turbo/cookies/1.cookie")}
+2025-10-16T23:22:06.725518Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-16T23:22:18.226025Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/edge-agent/src/MQTTClient.ts")}
+2025-10-16T23:22:18.226037Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/edge-agent"), path: AnchoredSystemPathBuf("apps/edge-agent") }}))
+2025-10-16T23:22:18.326712Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/edge-agent/src/MQTTClient.ts")}
+2025-10-16T23:22:18.326723Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/edge-agent"), path: AnchoredSystemPathBuf("apps/edge-agent") }}))
+2025-10-16T23:22:18.326738Z  WARN turborepo_lib::package_changes_watcher: hashes are the same, no need to rerun
+2025-10-16T23:22:21.426969Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/edge-agent/src/MQTTClient.ts")}
+2025-10-16T23:22:21.426980Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/edge-agent"), path: AnchoredSystemPathBuf("apps/edge-agent") }}))
+2025-10-16T23:22:37.526089Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf(".turbo/cookies/2.cookie")}
+2025-10-16T23:22:37.526100Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-16T23:23:22.027528Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf(".turbo/cookies/3.cookie")}
+2025-10-16T23:23:22.027545Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-16T23:23:33.125921Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/summit-integration/src/VideoStreamManager.ts")}
+2025-10-16T23:23:33.125939Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/summit-integration"), path: AnchoredSystemPathBuf("apps/summit-integration") }}))
+2025-10-16T23:23:36.826831Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/summit-integration/src/VideoStreamManager.ts")}
+2025-10-16T23:23:36.826843Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/summit-integration"), path: AnchoredSystemPathBuf("apps/summit-integration") }}))
+2025-10-16T23:23:41.027445Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/summit-integration/src/VideoStreamManager.ts")}
+2025-10-16T23:23:41.027456Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/summit-integration"), path: AnchoredSystemPathBuf("apps/summit-integration") }}))
+2025-10-16T23:23:46.026686Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/summit-integration/src/VideoStreamManager.ts")}
+2025-10-16T23:23:46.026696Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/summit-integration"), path: AnchoredSystemPathBuf("apps/summit-integration") }}))
+2025-10-16T23:23:56.226063Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/edge-agent/src/MQTTClient.ts")}
+2025-10-16T23:23:56.226089Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/edge-agent"), path: AnchoredSystemPathBuf("apps/edge-agent") }}))
+2025-10-16T23:24:59.327389Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf(".turbo/cookies/4.cookie")}
+2025-10-16T23:24:59.327414Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-16T23:25:14.127447Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/sentry-tower/src/index.ts")}
+2025-10-16T23:25:14.127495Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/sentry-tower"), path: AnchoredSystemPathBuf("apps/sentry-tower") }}))

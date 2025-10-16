@@ -4,8 +4,8 @@
  */
 
 import { EventEmitter } from 'events';
-import * as ffmpeg from 'fluent-ffmpeg';
-import * as sharp from 'sharp';
+import ffmpeg from 'fluent-ffmpeg';
+import sharp from 'sharp';
 import { SummitClient, VideoStream } from './SummitClient';
 
 export interface StreamConfig {
@@ -239,13 +239,13 @@ export class VideoStreamManager extends EventEmitter {
         '-f', 'rtsp'
       ])
       .output(`rtsp://localhost:8554/${config.deviceId}`)
-      .on('start', (commandLine) => {
+      .on('start', (commandLine: string) => {
         console.log(`FFmpeg started for device ${config.deviceId}: ${commandLine}`);
       })
-      .on('progress', (progress) => {
+      .on('progress', (progress: any) => {
         this.updateStreamStats(config.deviceId, progress);
       })
-      .on('error', (error) => {
+      .on('error', (error: Error) => {
         console.error(`FFmpeg error for device ${config.deviceId}:`, error);
         this.emit('streamError', { deviceId: config.deviceId, error });
       })
