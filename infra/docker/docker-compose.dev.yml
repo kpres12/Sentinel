@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   # PostgreSQL with PostGIS
@@ -57,7 +56,7 @@ services:
       retries: 3
 
   # Mission Dispatcher (auto-dispatch swarm on alerts)
-mission-dispatcher:
+  mission-dispatcher:
     build:
       context: ../../
       dockerfile: apps/mission-dispatcher/Dockerfile
@@ -117,7 +116,7 @@ mission-dispatcher:
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   # Console (Next.js)
-console:
+  console:
     build:
       context: ../../apps/console
       dockerfile: Dockerfile

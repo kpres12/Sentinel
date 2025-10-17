@@ -7,15 +7,13 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
-    ros2 \
-    ros2-common-interfaces
 
 # Copy package files
 COPY package*.json ./
 COPY tsconfig.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install --only=production
 
 # Copy source code
 COPY src/ ./src/

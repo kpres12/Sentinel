@@ -19,7 +19,8 @@
     "db:seed": "cd apps/apigw && python scripts/seed_data.py",
     "docker:dev": "docker-compose -f infra/docker/docker-compose.dev.yml up",
     "docker:down": "docker-compose -f infra/docker/docker-compose.dev.yml down",
-    "start": "docker-compose -f infra/docker/docker-compose.dev.yml up"
+    "start": "docker-compose -f infra/docker/docker-compose.dev.yml up",
+    "start:web": "npm run --workspace=@bigmt/console dev"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
