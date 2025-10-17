@@ -66,10 +66,10 @@ export function MissionsPanel() {
     }
   }
 
-  const handleDispatch = (missionType: string) => {
+  const handleDispatch = (missionType: 'surveillance' | 'firefighting' | 'rescue' | 'patrol') => {
     const newMission = {
       type: missionType,
-      priority: 'medium',
+      priority: 'medium' as 'medium',
       location: {
         lat: 40.0,
         lng: 120.0,

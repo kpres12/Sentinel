@@ -6,7 +6,10 @@ import { settingsStore, type Settings } from '../../store/settingsStore'
 export function SettingsPanel() {
   const [settings, setSettings] = useState<Settings>(settingsStore.get())
 
-  useEffect(() => settingsStore.subscribe(setSettings), [])
+  useEffect(() => {
+    const unsub = settingsStore.subscribe(setSettings)
+    return () => { unsub() }
+  }, [])
 
   return (
     <div className="h-full flex flex-col">
