@@ -1,0 +1,192 @@
+# Docker Compose configuration for Tiered Response System
+# Extends the base docker-compose.yml with tiered response services
+
+version: '3.8'
+
+services:
+  # Enhanced Mission Dispatcher with Tiered Response
+  mission-dispatcher-tiered:
+    build:
+      context: .
+      dockerfile: apps/mission-dispatcher/Dockerfile
+    environment:
+      - ENABLE_TIERED_RESPONSE=true
+      - SUMMIT_API_URL=http://summit-os:8080
+      - SUMMIT_API_KEY=${SUMMIT_API_KEY:-dev_key}
+      - MQTT_URL=mqtt://mqtt-broker:1883
+      - AUTONOMOUS_THRESHOLD=${AUTONOMOUS_THRESHOLD:-0.6}
+      - DISPATCHER_HEALTH_PORT=8089
+      - TARGET_TIER1_RESPONSE_TIME=${TARGET_TIER1_RESPONSE_TIME:-60}
+      - TARGET_TIER2_RESPONSE_TIME=${TARGET_TIER2_RESPONSE_TIME:-120}
+      - TARGET_TIER3_RESPONSE_TIME=${TARGET_TIER3_RESPONSE_TIME:-300}
+    ports:
+      - "8089:8089"  # Health/status endpoint
+    depends_on:
+      - mqtt-broker
+      - summit-os
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8089/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Summit.OS Mock Service (for development)
+  summit-os:
+    build:
+      context: ./infra/summit-mock
+      dockerfile: Dockerfile
+    environment:
+      - PORT=8080
+      - MOCK_ASSETS=${AVAILABLE_ASSETS:-firefly-001,firefly-002,emberwing-001}
+      - ENABLE_WEBSOCKET=true
+    ports:
+      - "8080:8080"
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/system/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MQTT Broker with persistence
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    ports:
+      - "1883:1883"
+      - "8883:8883"  # TLS port
+      - "8083:8083"  # WebSocket port
+    volumes:
+      - ./infra/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./infra/mqtt/auth:/mosquitto/auth:ro
+      - mqtt-data:/mosquitto/data
+      - mqtt-logs:/mosquitto/log
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  # Enhanced Console with Tiered Response UI
+  console-tiered:
+    build:
+      context: .
+      dockerfile: apps/console/Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws
+      - NEXT_PUBLIC_MQTT_WS_URL=ws://localhost:8083/mqtt
+      - NEXT_PUBLIC_SUMMIT_API_KEY=${SUMMIT_API_KEY:-dev_key}
+      - NEXT_PUBLIC_ENABLE_TIERED_RESPONSE=true
+      - NEXT_PUBLIC_TIERED_STATUS_URL=http://localhost:8089/status
+    ports:
+      - "3001:3000"  # Use different port to avoid conflicts
+    depends_on:
+      - mission-dispatcher-tiered
+      - apigw
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  # Metrics & Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./infra/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Log aggregation
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/logging/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - ./logs:/var/log/sentinel:ro
+      - ./infra/logging/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+volumes:
+  mqtt-data:
+  mqtt-logs:
+  prometheus-data:
+  grafana-data:
+  redis-data:
+  loki-data:
+
+networks:
+  sentinel-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# Health checks and startup order
+x-healthcheck: &default-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
