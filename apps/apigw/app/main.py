@@ -70,11 +70,21 @@ app.add_middleware(MetricsMiddleware)
 # Include routers
 app.include_router(telemetry.router, prefix="/api/v1/telemetry", tags=["telemetry"])
 app.include_router(missions_router.router, prefix="/api/v1/missions", tags=["missions"])
-app.include_router(detections.router, prefix="/api/v1/detections", tags=["detections"])
-app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["alerts"])
-app.include_router(triangulation.router, prefix="/api/v1/triangulation", tags=["triangulation"])
-app.include_router(prediction.router, prefix="/api/v1/prediction", tags=["prediction"])
-app.include_router(integrations.router, prefix="/api/v1/integrations", tags=["integrations"])
+
+# Optional routers (load if available)
+for _name, _prefix, _tags in [
+    ("app.routers.detections", "/api/v1/detections", ["detections"]),
+    ("app.routers.alerts", "/api/v1/alerts", ["alerts"]),
+    ("app.routers.triangulation", "/api/v1/triangulation", ["triangulation"]),
+    ("app.routers.prediction", "/api/v1/prediction", ["prediction"]),
+    ("app.routers.integrations", "/api/v1/integrations", ["integrations"]),
+]:
+    try:
+        mod = __import__(_name, fromlist=["router"])  # type: ignore
+        app.include_router(mod.router, prefix=_prefix, tags=_tags)  # type: ignore
+        logger.info(f"Loaded router: {_name}")
+    except Exception as e:
+        logger.warning(f"Router {_name} not loaded: {e}")
 
 
 @app.get("/")
