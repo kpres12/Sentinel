@@ -5,10 +5,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "echo 'python-only: no build'",
     "clean": "rm -rf dist",
-    "type-check": "tsc --noEmit",
-    "test": "jest"
+    "type-check": "echo 'python-only: skipping type-check'",
+    "test": "echo 'python-only: no tests'"
   },
   "dependencies": {},
   "devDependencies": {

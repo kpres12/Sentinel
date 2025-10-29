@@ -30,12 +30,28 @@ export class MQTTClient {
           `edge_agent_${this.config.deviceId}`
         )
 
+        // Prepare LWT (Last Will and Testament)
+        const will = new mqtt.Message(JSON.stringify({ deviceId: this.config.deviceId, status: 'offline' }))
+        will.destinationName = `devices/${this.config.deviceId}/status`
+        will.qos = 1
+        will.retained = true
+
         // Set up connection options
         const options: mqtt.ConnectionOptions = {
           onSuccess: () => {
             this.logger.info('Connected to MQTT broker')
             this.isConnected = true
             this.reconnectAttempts = 0
+            // Publish online retained status
+            try {
+              const online = new mqtt.Message(JSON.stringify({ deviceId: this.config.deviceId, status: 'online' }))
+              online.destinationName = `devices/${this.config.deviceId}/status`
+              online.qos = 1
+              online.retained = true
+              this.client!.send(online)
+            } catch (e) {
+              this.logger.warn('Failed to publish online status', e as any)
+            }
             resolve()
           },
           onFailure: (error) => {
@@ -45,7 +61,8 @@ export class MQTTClient {
           },
           useSSL: this.config.mqttUseSSL,
           keepAliveInterval: 60,
-          cleanSession: true
+          cleanSession: true,
+          willMessage: will,
         }
 
         // Add authentication only if credentials are provided
@@ -88,7 +105,7 @@ export class MQTTClient {
     })
   }
 
-  async publish(topic: string, message: string, qos: number = 0): Promise<void> {
+  async publish(topic: string, message: string, qos: number = 0, retain = false, attempt = 0): Promise<void> {
     if (!this.client || !this.isConnected) {
       throw new Error('MQTT client not connected')
     }
@@ -97,14 +114,22 @@ export class MQTTClient {
       const mqttMessage = new mqtt.Message(message)
       mqttMessage.destinationName = topic
       mqttMessage.qos = qos as mqtt.Qos
-      mqttMessage.retained = false
+      mqttMessage.retained = retain
 
       this.client.send(mqttMessage)
       this.logger.debug(`Published message to topic ${topic}`)
 
     } catch (error) {
       this.logger.error(`Failed to publish message to topic ${topic}:`, error)
-      throw error
+      // Retry with jitter up to 3 attempts
+      if (attempt < 3) {
+        const backoff = Math.min(1000 * Math.pow(2, attempt), 5000) + Math.floor(Math.random() * 250)
+        setTimeout(() => {
+          this.publish(topic, message, qos, retain, attempt + 1).catch((e) => this.logger.error('Retry publish failed', e))
+        }, backoff)
+      } else {
+        throw error
+      }
     }
   }
 

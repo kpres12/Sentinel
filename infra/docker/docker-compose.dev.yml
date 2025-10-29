@@ -1,20 +1,21 @@
-
+version: "3.9"
 services:
   # PostgreSQL with PostGIS
   postgres:
     image: postgis/postgis:15-3.3
     container_name: wildfire-postgres
+    env_file:
+      - ../../.env
     environment:
-      POSTGRES_DB: wildfire_ops
-      POSTGRES_USER: wildfire
-      POSTGRES_PASSWORD: wildfire123
+      POSTGRES_DB: ${POSTGRES_DB:-wildfire_ops}
+      POSTGRES_USER: ${POSTGRES_USER:-wildfire}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wildfire123}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wildfire -d wildfire_ops"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wildfire} -d ${POSTGRES_DB:-wildfire_ops}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,11 +38,13 @@ services:
   emqx:
     image: emqx/emqx:5.3.0
     container_name: wildfire-emqx
+    env_file:
+      - ../../.env
     environment:
       EMQX_NAME: wildfire-emqx
       EMQX_HOST: localhost
-      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
-      EMQX_DASHBOARD__DEFAULT_PASSWORD: admin123
+      EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_USERNAME:-admin}
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_PASSWORD:-admin123}
     ports:
       - "1883:1883"
       - "8083:8083"
@@ -55,28 +58,29 @@ services:
       timeout: 10s
       retries: 3
 
-  # Mission Dispatcher (auto-dispatch swarm on alerts)
+  # Mission Dispatcher (stubbed)
   mission-dispatcher:
     build:
       context: ../../
       dockerfile: apps/mission-dispatcher/Dockerfile
     container_name: wildfire-mission-dispatcher
+    env_file:
+      - ../../.env
     environment:
-      MQTT_URL: mqtt://emqx:1883
-      ALERTS_TOPIC: wildfire/alerts
-      TRIANGULATION_TOPIC: wildfire/triangulations
-      DISPATCHER_MISSIONS_TOPIC: missions/updates
+      MQTT_URL: ${MQTT_URL:-mqtt://emqx:1883}
+      ALERTS_TOPIC: ${ALERTS_TOPIC:-wildfire/alerts}
+      TRIANGULATION_TOPIC: ${TRIANGULATION_TOPIC:-wildfire/triangulations}
+      DISPATCHER_MISSIONS_TOPIC: ${DISPATCHER_MISSIONS_TOPIC:-missions/updates}
       SUMMIT_API_URL: http://apigw:8000
-      SUMMIT_API_KEY: ${SUMMIT_API_KEY}
-      DISPATCHER_MIN_CONFIDENCE: 0.8
+      SUMMIT_API_KEY: ${SUMMIT_API_KEY:-dev}
+      DISPATCHER_MIN_CONFIDENCE: ${DISPATCHER_MIN_CONFIDENCE:-0.8}
       DISPATCHER_REQUIRE_CONFIRM: ${DISPATCHER_REQUIRE_CONFIRM:-false}
-      DISPATCHER_ASSETS: drone-001,drone-002
-      DISPATCHER_LOITER_RADIUS_M: 200
-      DISPATCHER_ALT_M: 120
-      # Policy gates
-      GEOFENCE_BBOX: "-180,-90,180,90"
-      WX_MAX_WIND_MPS: 12
-      WX_MIN_VIS_KM: 1
+      DISPATCHER_ASSETS: ${DISPATCHER_ASSETS:-drone-001,drone-002}
+      DISPATCHER_LOITER_RADIUS_M: ${DISPATCHER_LOITER_RADIUS_M:-200}
+      DISPATCHER_ALT_M: ${DISPATCHER_ALT_M:-120}
+      GEOFENCE_BBOX: ${GEOFENCE_BBOX:--180,-90,180,90}
+      WX_MAX_WIND_MPS: ${WX_MAX_WIND_MPS:-12}
+      WX_MIN_VIS_KM: ${WX_MIN_VIS_KM:-1}
       DISPATCHER_HEALTH_PORT: 8089
     depends_on:
       emqx:
@@ -95,8 +99,10 @@ services:
       context: ../../apps/apigw
       dockerfile: Dockerfile
     container_name: wildfire-apigw
+    env_file:
+      - ../../.env
     environment:
-      DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
+      DATABASE_URL: ${DATABASE_URL:-postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       MQTT_BROKER: emqx
@@ -121,9 +127,11 @@ services:
       context: ../../apps/console
       dockerfile: Dockerfile
     container_name: wildfire-console
+    env_file:
+      - ../../.env
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-      NEXT_PUBLIC_MQTT_WS_URL: ws://localhost:8083/mqtt
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_MQTT_WS_URL: ${NEXT_PUBLIC_MQTT_WS_URL:-ws://localhost:8083/mqtt}
     ports:
       - "3000:3000"
     depends_on:
@@ -138,75 +146,45 @@ services:
       timeout: 5s
       retries: 5
 
-  # Edge Agent (Mock)
+  # Edge Agent (simulator)
   edge-agent:
     build:
       context: ../../apps/edge-agent
       dockerfile: Dockerfile
     container_name: wildfire-edge-agent
+    env_file:
+      - ../../.env
     environment:
       MQTT_BROKER: emqx
       MQTT_PORT: 1883
-      DEVICE_ID: edge-device-001
+      DEVICE_ID: ${DEVICE_ID:-edge-device-001}
     depends_on:
       emqx:
         condition: service_healthy
     volumes:
       - ../../apps/edge-agent:/app
 
-  # Fusion Service
-  # fusion:
-  #   build:
-  #     context: ../../apps/fusion
-  #     dockerfile: Dockerfile
-  #   container_name: wildfire-fusion
-  #   environment:
-  #     DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
-  #     REDIS_HOST: redis
-  #     REDIS_PORT: 6379
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ../../apps/fusion:/app
+  # Triangulation Service (stub)
+  triangulate:
+    build:
+      context: ../../apps/triangulate
+      dockerfile: Dockerfile
+    container_name: wildfire-triangulate
+    env_file:
+      - ../../.env
+    ports:
+      - "8101:8101"
 
-  # Triangulation Service
-  # triangulate:
-  #   build:
-  #     context: ../../apps/triangulate
-  #     dockerfile: Dockerfile
-  #   container_name: wildfire-triangulate
-  #   environment:
-  #     DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
-  #     REDIS_HOST: redis
-  #     REDIS_PORT: 6379
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ../../apps/triangulate:/app
-
-  # Prediction Service
-  # predict:
-  #   build:
-  #     context: ../../apps/predict
-  #     dockerfile: Dockerfile
-  #   container_name: wildfire-predict
-  #   environment:
-  #     DATABASE_URL: postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops
-  #     REDIS_HOST: redis
-  #     REDIS_PORT: 6379
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   volumes:
-  #     - ../../apps/predict:/app
+  # Prediction Service (stub)
+  predict:
+    build:
+      context: ../../apps/predict
+      dockerfile: Dockerfile
+    container_name: wildfire-predict
+    env_file:
+      - ../../.env
+    ports:
+      - "8102:8102"
 
   # Summit Integration Service
   summit-integration:
@@ -214,9 +192,11 @@ services:
       context: ../../apps/summit-integration
       dockerfile: Dockerfile
     container_name: wildfire-summit-integration
+    env_file:
+      - ../../.env
     environment:
-      SUMMIT_API_URL: https://api.summit-os.bigmt.ai
-      SUMMIT_API_KEY: ${SUMMIT_API_KEY}
+      SUMMIT_API_URL: ${SUMMIT_API_URL:-https://api.summit-os.bigmt.ai}
+      SUMMIT_API_KEY: ${SUMMIT_API_KEY:-dev}
       VIDEO_STREAMING: true
       OFFLINE_MODE: true
     ports:
@@ -232,26 +212,27 @@ services:
       context: ../../apps/sentry-tower
       dockerfile: Dockerfile
     container_name: wildfire-sentry-tower
+    env_file:
+      - ../../.env
     environment:
-      TOWER_ID: tower-001
-      TOWER_NAME: FireWatch Alpha
-      TOWER_LATITUDE: 40.0
-      TOWER_LONGITUDE: -120.0
-      TOWER_ALTITUDE: 1000.0
-      THERMAL_CAMERA_MODEL: FLIR_A35
-      THERMAL_CAMERA_RESOLUTION: 640x512
-      THERMAL_CAMERA_FPS: 30
-      THERMAL_DETECTION_THRESHOLD: 0.7
-      ACOUSTIC_ARRAY_ENABLED: true
-      ACOUSTIC_MICROPHONES: 4
-      ACOUSTIC_DETECTION_THRESHOLD: 0.6
-      # Model configuration for ONNX
-      SENTRY_MODEL_PATH: apps/sentry-tower/models/smoke_detection.onnx
-      SENTRY_CONF_THRESHOLD: 0.80
-      SENTRY_NMS_THRESHOLD: 0.45
-      SENTRY_FRAME_STRIDE: 3
-      SUMMIT_API_URL: https://api.summit-os.bigmt.ai
-      SUMMIT_API_KEY: ${SUMMIT_API_KEY}
+      TOWER_ID: ${TOWER_ID:-tower-001}
+      TOWER_NAME: ${TOWER_NAME:-FireWatch Alpha}
+      TOWER_LATITUDE: ${TOWER_LATITUDE:-40.0}
+      TOWER_LONGITUDE: ${TOWER_LONGITUDE:-120.0}
+      TOWER_ALTITUDE: ${TOWER_ALTITUDE:-1000.0}
+      THERMAL_CAMERA_MODEL: ${THERMAL_CAMERA_MODEL:-FLIR_A35}
+      THERMAL_CAMERA_RESOLUTION: ${THERMAL_CAMERA_RESOLUTION:-640x512}
+      THERMAL_CAMERA_FPS: ${THERMAL_CAMERA_FPS:-30}
+      THERMAL_DETECTION_THRESHOLD: ${THERMAL_DETECTION_THRESHOLD:-0.7}
+      ACOUSTIC_ARRAY_ENABLED: ${ACOUSTIC_ARRAY_ENABLED:-true}
+      ACOUSTIC_MICROPHONES: ${ACOUSTIC_MICROPHONES:-4}
+      ACOUSTIC_DETECTION_THRESHOLD: ${ACOUSTIC_DETECTION_THRESHOLD:-0.6}
+      SENTRY_MODEL_PATH: ${SENTRY_MODEL_PATH:-apps/sentry-tower/models/smoke_detection.onnx}
+      SENTRY_CONF_THRESHOLD: ${SENTRY_CONF_THRESHOLD:-0.80}
+      SENTRY_NMS_THRESHOLD: ${SENTRY_NMS_THRESHOLD:-0.45}
+      SENTRY_FRAME_STRIDE: ${SENTRY_FRAME_STRIDE:-3}
+      SUMMIT_API_URL: ${SUMMIT_API_URL:-https://api.summit-os.bigmt.ai}
+      SUMMIT_API_KEY: ${SUMMIT_API_KEY:-dev}
       SUMMIT_VIDEO_STREAMING: true
       SUMMIT_OFFLINE_MODE: true
     depends_on:
@@ -265,19 +246,21 @@ services:
       context: ../../apps/fireline-bot
       dockerfile: Dockerfile
     container_name: wildfire-fireline-bot
+    env_file:
+      - ../../.env
     environment:
-      BOT_ID: fireline-bot-001
-      BOT_NAME: KOFA Alpha
-      BOT_MAX_SPEED: 5.0
-      BOT_MAX_SLOPE: 30.0
-      BOT_CLEARING_WIDTH: 3.0
-      BOT_WATER_CAPACITY: 500
-      BOT_FUEL_CAPACITY: 50
-      BOT_OPERATING_TIME: 8
-      BOT_SAFETY_ENABLED: true
-      BOT_EMERGENCY_STOP_ENABLED: true
-      SUMMIT_API_URL: https://api.summit-os.bigmt.ai
-      SUMMIT_API_KEY: ${SUMMIT_API_KEY}
+      BOT_ID: ${BOT_ID:-fireline-bot-001}
+      BOT_NAME: ${BOT_NAME:-KOFA Alpha}
+      BOT_MAX_SPEED: ${BOT_MAX_SPEED:-5.0}
+      BOT_MAX_SLOPE: ${BOT_MAX_SLOPE:-30.0}
+      BOT_CLEARING_WIDTH: ${BOT_CLEARING_WIDTH:-3.0}
+      BOT_WATER_CAPACITY: ${BOT_WATER_CAPACITY:-500}
+      BOT_FUEL_CAPACITY: ${BOT_FUEL_CAPACITY:-50}
+      BOT_OPERATING_TIME: ${BOT_OPERATING_TIME:-8}
+      BOT_SAFETY_ENABLED: ${BOT_SAFETY_ENABLED:-true}
+      BOT_EMERGENCY_STOP_ENABLED: ${BOT_EMERGENCY_STOP_ENABLED:-true}
+      SUMMIT_API_URL: ${SUMMIT_API_URL:-https://api.summit-os.bigmt.ai}
+      SUMMIT_API_KEY: ${SUMMIT_API_KEY:-dev}
     depends_on:
       - summit-integration
     volumes:

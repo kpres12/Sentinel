@@ -97,7 +97,7 @@ export class EdgeAgent {
       if (detection) {
         const topic = `devices/${this.config.deviceId}/detections`
         
-        await this.mqttClient.publish(topic, JSON.stringify(detection))
+        await this.mqttClient.publish(topic, JSON.stringify(detection), 1)
         
         this.logger.debug('Published detection:', detection)
       }

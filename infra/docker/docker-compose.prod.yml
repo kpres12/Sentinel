@@ -1,0 +1,64 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wildfire_ops}
+      POSTGRES_USER: ${POSTGRES_USER:-wildfire}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wildfire123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+  emqx:
+    image: emqx/emqx:5.3.0
+    environment:
+      EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_USERNAME:-admin}
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_PASSWORD:-admin123}
+  apigw:
+    build:
+      context: ../../apps/apigw
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://wildfire:wildfire123@postgres:5432/wildfire_ops}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MQTT_BROKER: emqx
+      MQTT_PORT: 1883
+    depends_on:
+      - postgres
+      - redis
+      - emqx
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+  console:
+    build:
+      context: ../../apps/console
+      dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://apigw:8000}
+      NEXT_PUBLIC_MQTT_WS_URL: ${NEXT_PUBLIC_MQTT_WS_URL:-ws://emqx:8083/mqtt}
+    depends_on:
+      - apigw
+  triangulate:
+    build:
+      context: ../../apps/triangulate
+      dockerfile: Dockerfile
+  predict:
+    build:
+      context: ../../apps/predict
+      dockerfile: Dockerfile
+  mission-dispatcher:
+    build:
+      context: ../../
+      dockerfile: apps/mission-dispatcher/Dockerfile
+    environment:
+      MQTT_URL: ${MQTT_URL:-mqtt://emqx:1883}
+      DISPATCHER_MISSIONS_TOPIC: ${DISPATCHER_MISSIONS_TOPIC:-missions/updates}
+      SUMMIT_API_URL: http://apigw:8000
+      SUMMIT_API_KEY: ${SUMMIT_API_KEY:-dev}
+
+volumes:
+  postgres_data:
+  redis_data:

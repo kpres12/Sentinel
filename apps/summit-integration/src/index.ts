@@ -39,7 +39,7 @@ export type {
   ThermalCameraConfig,
   AcousticArrayConfig,
   FireDetectionResult,
-  MultiSensorFusion
+  MultiSensorFusionState
 } from './SentryTowerAgent';
 
 export type {
