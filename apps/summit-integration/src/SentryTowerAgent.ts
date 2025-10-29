@@ -79,7 +79,7 @@ export interface FireDetectionResult {
   source: 'thermal' | 'acoustic' | 'fusion';
 }
 
-export interface MultiSensorFusion {
+export interface MultiSensorFusionState {
   thermalConfidence: number;
   acousticConfidence: number;
   visualConfidence: number;

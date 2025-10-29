@@ -12,7 +12,7 @@ export interface SummitConfig {
   apiKey: string;
   videoStreaming: boolean;
   offlineMode: boolean;
-  reconnectInterval: number;
+  reconnectInterval?: number;
 }
 
 export interface DroneStatus {
@@ -108,6 +108,11 @@ export class SummitClient extends EventEmitter {
     });
 
     this.setupHttpInterceptors();
+
+    // Apply defaults
+    if (!this.config.reconnectInterval || this.config.reconnectInterval <= 0) {
+      this.config.reconnectInterval = 5000;
+    }
   }
 
   /**
