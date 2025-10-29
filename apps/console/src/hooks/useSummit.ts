@@ -292,7 +292,7 @@ export function useSummitPrediction() {
   }
 }
 
-// Hook for Summit.OS connection status
+// Hook for Summit.OS connection status (MQTT only)
 export function useSummitConnection() {
   const [connectionStatus, setConnectionStatus] = useState({
     isConnected: false,
@@ -305,14 +305,44 @@ export function useSummitConnection() {
       setConnectionStatus(status)
     }
 
-    // Update status immediately
     updateStatus()
-
-    // Update status every 5 seconds
     const interval = setInterval(updateStatus, 5000)
-
     return () => clearInterval(interval)
   }, [])
 
   return connectionStatus
+}
+
+// Hook for backend connectivity (MQTT + API WebSocket)
+export function useBackendConnectivity() {
+  const [mqttConnected, setMqttConnected] = useState(false)
+  const [wsConnected, setWsConnected] = useState(false)
+
+  useEffect(() => {
+    // MQTT status poll
+    const poll = setInterval(() => {
+      setMqttConnected(summitClient.getConnectionStatus().isConnected)
+    }, 3000)
+    setMqttConnected(summitClient.getConnectionStatus().isConnected)
+
+    // WebSocket to API Gateway /ws/events
+    let ws: WebSocket | null = null
+    try {
+      const api = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+      const wsUrl = api.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws/events'
+      ws = new WebSocket(wsUrl)
+      ws.onopen = () => setWsConnected(true)
+      ws.onclose = () => setWsConnected(false)
+      ws.onerror = () => setWsConnected(false)
+    } catch {
+      setWsConnected(false)
+    }
+
+    return () => {
+      clearInterval(poll)
+      if (ws) ws.close()
+    }
+  }, [])
+
+  return { mqttConnected, wsConnected }
 }

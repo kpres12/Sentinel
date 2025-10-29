@@ -10,7 +10,7 @@ from collections import deque
 from uuid import uuid4
 import os
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
@@ -77,7 +77,7 @@ class MissionUpdateIn(BaseModel):
 
 
 @router.post("/", response_model=MissionOut)
-async def create_mission(mission: MissionIn, db: Session = Depends(get_db)) -> MissionOut:
+async def create_mission(mission: MissionIn, request: Request, db: Session = Depends(get_db)) -> MissionOut:
     """Create a mission record, publish to MQTT, and return UI-friendly object."""
     try:
         mission_id = mission.mission_id or f"recon-{int(datetime.now(tz=timezone.utc).timestamp()*1000)}-{uuid4().hex[:6]}"
@@ -116,9 +116,35 @@ async def create_mission(mission: MissionIn, db: Session = Depends(get_db)) -> M
         # Publish to MQTT for real-time UI updates
         try:
             mqtt_client.publish(MISSIONS_TOPIC, out.model_dump_json(), qos=0)
-        except Exception as e:
-            # Non-fatal: API still returns 200
+        except Exception:
             pass
+
+        # Broadcast over WebSocket
+        try:
+            await request.app.state.broadcast_event({"type": "mission_created", "mission": out.model_dump()})
+        except Exception:
+            pass
+
+        # Schedule simple status transitions (pending->active->completed)
+        import asyncio
+        async def _advance():
+            try:
+                await asyncio.sleep(5)
+                row = db.query(MissionModel).filter(MissionModel.mission_id == mission_id).first()
+                if row:
+                    row.status = "active"
+                    db.commit()
+                    await request.app.state.broadcast_event({"type": "mission_updated", "id": mission_id, "status": "active"})
+                await asyncio.sleep(10)
+                row = db.query(MissionModel).filter(MissionModel.mission_id == mission_id).first()
+                if row:
+                    row.status = "completed"
+                    row.progress = 100
+                    db.commit()
+                    await request.app.state.broadcast_event({"type": "mission_updated", "id": mission_id, "status": "completed", "progress": 100})
+            except Exception:
+                pass
+        asyncio.create_task(_advance())
 
         return out
     except Exception as e:
@@ -150,7 +176,7 @@ async def list_missions(limit: int = Query(100, ge=1, le=500), db: Session = Dep
 
 
 @router.patch("/{mission_id}", response_model=MissionOut)
-async def update_mission(mission_id: str, body: MissionUpdateIn, db: Session = Depends(get_db)) -> MissionOut:
+async def update_mission(mission_id: str, body: MissionUpdateIn, request: Request, db: Session = Depends(get_db)) -> MissionOut:
     """Update mission status/progress and publish MQTT update."""
     try:
         row: MissionModel = db.query(MissionModel).filter(MissionModel.mission_id == mission_id).first()
@@ -185,6 +211,11 @@ async def update_mission(mission_id: str, body: MissionUpdateIn, db: Session = D
         # Publish update
         try:
             mqtt_client.publish(MISSIONS_TOPIC, out.model_dump_json(), qos=0)
+        except Exception:
+            pass
+        # Broadcast over WebSocket
+        try:
+            await request.app.state.broadcast_event({"type": "mission_updated", "mission": out.model_dump()})
         except Exception:
             pass
 

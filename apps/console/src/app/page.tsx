@@ -33,7 +33,7 @@ import { KOFAMissionPanel } from '../components/controls/KOFAMissionPanel'
 import { VideoFeedPanel } from '../components/panels/VideoFeedPanel'
 import { SettingsPanel } from '../components/panels/SettingsPanel'
 import { ToastProvider } from '../components/ui/Toast'
-import { useSummitConnection } from '../hooks/useSummit'
+import { useBackendConnectivity } from '../hooks/useSummit'
 
 const queryClient = new QueryClient()
 
@@ -44,7 +44,7 @@ function HomePageContent() {
   const [terrainVisible, setTerrainVisible] = useState(true)
   const [mapPoppedOut, setMapPoppedOut] = useState(false)
   const [popupWindow, setPopupWindow] = useState<Window | null>(null)
-  const { isConnected } = useSummitConnection()
+  const { mqttConnected, wsConnected } = useBackendConnectivity()
 
   const openPopupWindow = () => {
     const popup = window.open('', 'mapPopup', 'width=1200,height=800,resizable=yes,scrollbars=yes,status=yes')
@@ -223,9 +223,15 @@ function HomePageContent() {
             {/* Center Section - Status Indicators */}
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
-                <Wifi className={`w-4 h-4 ${isConnected ? 'text-tacticalGreen-400' : 'text-fire-400'}`} />
+                <Wifi className={`w-4 h-4 ${mqttConnected ? 'text-tacticalGreen-400' : 'text-fire-400'}`} />
                 <span className="text-sm font-mono text-tactical-300">
-                  {isConnected ? 'SUMMIT.OS ONLINE' : 'SUMMIT.OS OFFLINE'}
+                  {mqttConnected ? 'MQTT ONLINE' : 'MQTT OFFLINE'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Wifi className={`w-4 h-4 ${wsConnected ? 'text-tacticalGreen-400' : 'text-fire-400'}`} />
+                <span className="text-sm font-mono text-tactical-300">
+                  {wsConnected ? 'WS ONLINE' : 'WS OFFLINE'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
