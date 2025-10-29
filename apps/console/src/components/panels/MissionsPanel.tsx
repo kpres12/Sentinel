@@ -97,7 +97,41 @@ export function MissionsPanel() {
             <h2 className="tactical-title text-lg">MISSION CONTROL</h2>
             <p className="text-xs text-tactical-muted font-mono">WILDFIRE OPS COMMAND</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={async () => {
+                const api = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+                try {
+                  const res = await fetch(`${api}/api/v1/reports/situation.pdf`)
+                  if (!res.ok) throw new Error('Failed to fetch PDF')
+                  const blob = await res.blob()
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = `situation-report-${Date.now()}.pdf`
+                  a.click()
+                  URL.revokeObjectURL(url)
+                } catch (e) {
+                  console.error('Failed to generate PDF, falling back to JSON', e)
+                  try {
+                    const res = await fetch(`${api}/api/v1/reports/situation`, { method: 'POST' })
+                    const data = await res.json()
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `situation-report-${Date.now()}.json`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  } catch (err) {
+                    console.error('Failed to generate report', err)
+                  }
+                }
+              }}
+              className="px-2 py-1 rounded bg-tactical-600/30 hover:bg-tactical-600/40 text-xs font-mono"
+            >
+              GENERATE REPORT
+            </button>
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-tacticalGreen-400' : 'bg-fire-400'}`}></div>
             <span className="text-xs font-mono text-tactical-muted">
               {isConnected ? 'SUMMIT.OS CONNECTED' : 'SUMMIT.OS OFFLINE'}
