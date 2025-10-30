@@ -31,6 +31,13 @@ export class Config {
   public readonly missionDurationHours: number
   public readonly patrolRadiusKm: number
 
+  // Fault injection (dev only)
+  public readonly faultDropPct: number
+  public readonly faultLatencyMs: number
+
+  // Offline buffer
+  public readonly offlineBufferMax: number
+
   constructor() {
     // Device configuration
     this.deviceId = process.env.DEVICE_ID || 'edge-device-001'
@@ -59,6 +66,13 @@ export class Config {
     // Mission configuration
     this.missionDurationHours = parseInt(process.env.MISSION_DURATION_HOURS || '8')
     this.patrolRadiusKm = parseFloat(process.env.PATROL_RADIUS_KM || '10.0')
+
+    // Fault injection
+    this.faultDropPct = Math.min(1, Math.max(0, parseFloat(process.env.FAULT_DROP_PCT || '0')))
+    this.faultLatencyMs = Math.max(0, parseInt(process.env.FAULT_LATENCY_MS || '0'))
+
+    // Offline buffer
+    this.offlineBufferMax = Math.max(0, parseInt(process.env.OFFLINE_BUFFER_MAX || '100'))
   }
 
   validate(): void {
@@ -134,7 +148,10 @@ export class Config {
       detectionIntervalMs: this.detectionIntervalMs,
       telemetryIntervalMs: this.telemetryIntervalMs,
       missionDurationHours: this.missionDurationHours,
-      patrolRadiusKm: this.patrolRadiusKm
+      patrolRadiusKm: this.patrolRadiusKm,
+      faultDropPct: this.faultDropPct,
+      faultLatencyMs: this.faultLatencyMs,
+      offlineBufferMax: this.offlineBufferMax
     }
   }
 }
