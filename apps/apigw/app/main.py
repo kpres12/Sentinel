@@ -55,6 +55,9 @@ async def lifespan(app: FastAPI):
 
     logger.info("Database tables created successfully")
 
+    # Admin flags
+    app.state.require_confirm = (os.getenv("DISPATCHER_REQUIRE_CONFIRM", "false").lower() in ("1", "true", "yes"))
+
     # Background task: broadcast heartbeat events to websockets
     stop_event = asyncio.Event()
 
@@ -155,6 +158,7 @@ for _name, _prefix, _tags in [
     ("app.routers.prediction", "/api/v1/prediction", ["prediction"]),
     ("app.routers.integrations", "/api/v1/integrations", ["integrations"]),
     ("app.routers.reports", "/api/v1/reports", ["reports"]),
+    ("app.routers.admin", "/api/v1/admin", ["admin"]),
 ]:
     try:
         mod = __import__(_name, fromlist=["router"])  # type: ignore

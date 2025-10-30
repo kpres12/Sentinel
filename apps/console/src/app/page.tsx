@@ -25,6 +25,7 @@ import {
   Camera,
   Settings
 } from 'lucide-react'
+import { Sliders } from 'lucide-react'
 import { AlertsPanel } from '../components/panels/AlertsPanel'
 import { DevicesPanel } from '../components/panels/DevicesPanel'
 import { MissionsPanel } from '../components/panels/MissionsPanel'
@@ -409,6 +410,15 @@ function HomePageContent() {
                 >
                   <Shield className="w-5 h-5 text-warning-400" />
                   <span className="text-sm font-mono text-tactical-300">INTELLIGENCE</span>
+                </button>
+                <button
+                  onClick={() => setActivePanel('chaos')}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                    activePanel === 'chaos' ? 'bg-tactical-500/20 border border-tactical-500/30 shadow-glow' : 'hover:bg-dark-800'
+                  }`}
+                >
+                  <Sliders className="w-5 h-5 text-tactical-400" />
+                  <span className="text-sm font-mono text-tactical-300">CHAOS LAB</span>
                 </button>
               </div>
             </div>
@@ -1021,6 +1031,17 @@ function HomePageContent() {
                   )}
                   
                   {activePanel === 'video' && <VideoFeedPanel />}
+                  
+                  {activePanel === 'chaos' && (
+                    <div className="h-full flex flex-col">
+                      <div className="px-4 py-3 border-b border-dark-700">
+                        <h2 className="text-lg font-bold text-tactical-400">CHAOS LAB</h2>
+                      </div>
+                      <div className="flex-1 overflow-y-auto">
+                        {React.createElement(require('../components/panels/ChaosPanel').ChaosPanel)}
+                      </div>
+                    </div>
+                  )}
                   
                   {activePanel === 'intelligence' && (
                     <div className="h-full flex flex-col">

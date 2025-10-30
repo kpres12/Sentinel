@@ -13,6 +13,7 @@ export class MQTTClient {
   private isConnected: boolean = false
   private reconnectAttempts: number = 0
   private maxReconnectAttempts: number = 5
+  private queue: Array<{ topic: string; message: string; qos: number; retain: boolean }> = []
 
   constructor(config: Config) {
     this.config = config
@@ -52,6 +53,8 @@ export class MQTTClient {
             } catch (e) {
               this.logger.warn('Failed to publish online status', e as any)
             }
+            // Flush offline queue
+            this.flushQueue()
             resolve()
           },
           onFailure: (error) => {
@@ -84,6 +87,18 @@ export class MQTTClient {
           this.handleMessage(message)
         }
 
+        // Subscribe to control topic for runtime tuning
+        const controlTopic = `devices/${this.config.deviceId}/control`
+        // Slight delay after connect to ensure subscribe runs
+        setTimeout(() => {
+          try {
+            this.client?.subscribe(controlTopic, { qos: 1 as mqtt.Qos })
+            this.logger.info(`Subscribed to control topic ${controlTopic}`)
+          } catch (e) {
+            this.logger.warn('Failed to subscribe control topic', e as any)
+          }
+        }, 250)
+
         // Connect to broker
         this.client.connect(options)
 
@@ -106,11 +121,25 @@ export class MQTTClient {
   }
 
   async publish(topic: string, message: string, qos: number = 0, retain = false, attempt = 0): Promise<void> {
+    // Fault injection: drop
+    const dropPct = this.faultDropPct || this.config.faultDropPct
+    if (dropPct > 0 && Math.random() < dropPct) {
+      this.logger.warn(`Fault injection drop for topic ${topic}`)
+      return
+    }
+
+    // If not connected, enqueue
     if (!this.client || !this.isConnected) {
-      throw new Error('MQTT client not connected')
+      this.enqueue(topic, message, qos, retain)
+      return
     }
 
     try {
+      // Fault injection: latency
+      const latency = this.faultLatencyMs || this.config.faultLatencyMs
+      if (latency > 0) {
+        await new Promise((r) => setTimeout(r, latency))
+      }
       const mqttMessage = new mqtt.Message(message)
       mqttMessage.destinationName = topic
       mqttMessage.qos = qos as mqtt.Qos
@@ -133,6 +162,30 @@ export class MQTTClient {
     }
   }
 
+  private enqueue(topic: string, message: string, qos: number, retain: boolean) {
+    // bound buffer; drop oldest
+    const maxBuf = this.offlineBufferMax || this.config.offlineBufferMax
+    if (this.queue.length >= maxBuf) {
+      this.queue.shift()
+    }
+    this.queue.push({ topic, message, qos, retain })
+    this.logger.info(`Enqueued message (offline) -> ${topic} [${this.queue.length}/${this.config.offlineBufferMax}]`)
+  }
+
+  private async flushQueue() {
+    if (!this.client || !this.isConnected) return
+    while (this.queue.length > 0) {
+      const { topic, message, qos, retain } = this.queue.shift()!
+      try {
+        await this.publish(topic, message, qos, retain)
+      } catch (e) {
+        // put back and stop to avoid spin
+        this.queue.unshift({ topic, message, qos, retain })
+        break
+      }
+    }
+  }
+
   async subscribe(topic: string, qos: number = 0): Promise<void> {
     if (!this.client || !this.isConnected) {
       throw new Error('MQTT client not connected')
@@ -148,12 +201,30 @@ export class MQTTClient {
     }
   }
 
+  private faultDropPct = 0
+  private faultLatencyMs = 0
+  private offlineBufferMax = 100
+
   private handleMessage(message: mqtt.Message): void {
     try {
       const topic = message.destinationName
       const payload = message.payloadString
 
       this.logger.debug(`Received message on topic ${topic}: ${payload}`)
+
+      // Control messages for runtime tuning
+      if (topic === `devices/${this.config.deviceId}/control`) {
+        try {
+          const obj = JSON.parse(payload || '{}')
+          if (typeof obj.faultDropPct === 'number') this.faultDropPct = Math.max(0, Math.min(1, obj.faultDropPct))
+          if (typeof obj.faultLatencyMs === 'number') this.faultLatencyMs = Math.max(0, obj.faultLatencyMs)
+          if (typeof obj.offlineBufferMax === 'number') this.offlineBufferMax = Math.max(0, obj.offlineBufferMax)
+          this.logger.info(`Updated runtime tuning: drop=${this.faultDropPct}, latency=${this.faultLatencyMs}ms, buffer=${this.offlineBufferMax}`)
+        } catch (e) {
+          this.logger.warn('Invalid control payload', e as any)
+        }
+        return
+      }
 
       // Handle different message types
       if (topic.includes('/tasks/')) {

@@ -55,7 +55,17 @@ export class DetectionGenerator {
       confidence: confidence,
       media_ref: this.generateMediaRef(),
       source: 'edge',
-      metadata: this.generateMetadata(detectionType)
+      metadata: {
+        ...this.generateMetadata(detectionType),
+        explanation: {
+          model_version: 'edge_ml_v1.0',
+          threshold: 0.6,
+          reasons: [
+            confidence > 0.8 ? 'high_confidence_signal' : 'moderate_signal',
+            this.getSimulatedWindSpeed() < 5 ? 'calm_winds' : 'windy_conditions',
+          ],
+        },
+      },
     }
 
     this.lastDetectionTime = Date.now()

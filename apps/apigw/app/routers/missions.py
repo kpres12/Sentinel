@@ -82,10 +82,13 @@ async def create_mission(mission: MissionIn, request: Request, db: Session = Dep
     try:
         mission_id = mission.mission_id or f"recon-{int(datetime.now(tz=timezone.utc).timestamp()*1000)}-{uuid4().hex[:6]}"
         now = datetime.now(tz=timezone.utc)
+        # Initial status honors "require confirm" gate
+        require_confirm = os.getenv("DISPATCHER_REQUIRE_CONFIRM", "false").lower() in ("1", "true", "yes")
+        initial_status = "proposed" if require_confirm else "pending"
         out = MissionOut(
             id=mission_id,
             type=mission.type,
-            status="pending",
+            status=initial_status,
             priority=mission.priority,
             location=mission.location,
             description=mission.description or "",

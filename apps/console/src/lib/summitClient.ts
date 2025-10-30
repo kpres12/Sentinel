@@ -3,7 +3,7 @@
  * Handles REST API and MQTT connections to Summit.OS backend
  */
 
-import { Client } from 'paho-mqtt'
+import { Client, Message } from 'paho-mqtt'
 
 // Types for Summit.OS API responses
 export interface SummitAlert {
@@ -398,6 +398,23 @@ class SummitClient {
     if (this.mqttClient && this.isConnected) {
       this.mqttClient.disconnect()
       this.isConnected = false
+    }
+  }
+
+  publish(topic: string, payload: any, qos: 0|1|2 = 0) {
+    if (!this.mqttClient || !this.isConnected) {
+      console.warn('MQTT not connected; cannot publish')
+      return false
+    }
+    try {
+      const msg = new Message(typeof payload === 'string' ? payload : JSON.stringify(payload))
+      msg.destinationName = topic
+      msg.qos = qos
+      this.mqttClient.send(msg)
+      return true
+    } catch (e) {
+      console.error('Publish failed', e)
+      return false
     }
   }
 
