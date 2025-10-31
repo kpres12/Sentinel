@@ -1,0 +1,36 @@
+2025-10-31T21:05:46.735326Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf(".turbo/cookies/.turbo-cookie")}
+2025-10-31T21:05:46.735338Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:05:46.935699Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf(".turbo/cookies/9.cookie"), AnchoredSystemPathBuf(".turbo/cookies/10.cookie"), AnchoredSystemPathBuf(".turbo/cookies/4.cookie"), AnchoredSystemPathBuf("packages/schemas/.turbo"), AnchoredSystemPathBuf(".turbo/cookies/13.cookie"), AnchoredSystemPathBuf(".turbo/cookies/12.cookie"), AnchoredSystemPathBuf(".turbo/cookies/11.cookie"), AnchoredSystemPathBuf(".turbo/cookies/5.cookie"), AnchoredSystemPathBuf(".turbo/cookies/8.cookie"), AnchoredSystemPathBuf(".turbo/cookies/2.cookie"), AnchoredSystemPathBuf(".turbo/cookies/3.cookie"), AnchoredSystemPathBuf("apps/summit-integration/.turbo"), AnchoredSystemPathBuf(".turbo/cookies/1.cookie"), AnchoredSystemPathBuf(".turbo/cookies/7.cookie"), AnchoredSystemPathBuf(".turbo/cookies/6.cookie")}
+2025-10-31T21:05:46.935711Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }, WorkspacePackage { name: Other("@bigmt/schemas"), path: AnchoredSystemPathBuf("packages/schemas") }, WorkspacePackage { name: Other("@bigmt/summit-integration"), path: AnchoredSystemPathBuf("apps/summit-integration") }}))
+2025-10-31T21:05:47.170195Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf(".turbo/cookies/14.cookie")}
+2025-10-31T21:05:47.170205Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:05:48.035208Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf(".turbo/cookies/17.cookie"), AnchoredSystemPathBuf(".turbo/cookies/16.cookie"), AnchoredSystemPathBuf(".turbo/cookies/15.cookie")}
+2025-10-31T21:05:48.035218Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:27:04.572916Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/apigw/app/main.py")}
+2025-10-31T21:27:04.574293Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:27:13.159584Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/apigw/app/routers/tasks.py")}
+2025-10-31T21:27:13.159602Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:27:22.560130Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/apigw/app/routers/twin.py")}
+2025-10-31T21:27:22.560169Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:27:28.459894Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/apigw/app/routers/twin.py")}
+2025-10-31T21:27:28.459929Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:27:36.759701Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/apigw/app/routers/summit.py")}
+2025-10-31T21:27:36.759714Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:27:56.059874Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/apigw/app/bus.py")}
+2025-10-31T21:27:56.059936Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:28:06.360716Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/apigw/app/main.py")}
+2025-10-31T21:28:06.360735Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:28:15.260389Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/apigw/app/routers/detections.py"), AnchoredSystemPathBuf("apps/apigw/app/routers/missions.py")}
+2025-10-31T21:28:15.260402Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:28:57.761443Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/apigw/tests/test_flow.py"), AnchoredSystemPathBuf("apps/apigw/tests")}
+2025-10-31T21:28:57.761838Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Root, path: AnchoredSystemPathBuf("") }}))
+2025-10-31T21:29:14.561537Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/console/src/app/ag"), AnchoredSystemPathBuf("apps/console/src/app/ag/page.tsx")}
+2025-10-31T21:29:14.561571Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/console"), path: AnchoredSystemPathBuf("apps/console") }}))
+2025-10-31T21:29:21.060257Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/console/src/app/oilgas/page.tsx"), AnchoredSystemPathBuf("apps/console/src/app/oilgas")}
+2025-10-31T21:29:21.060297Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/console"), path: AnchoredSystemPathBuf("apps/console") }}))
+2025-10-31T21:40:18.075746Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/console/src/app/page.tsx")}
+2025-10-31T21:40:18.077246Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/console"), path: AnchoredSystemPathBuf("apps/console") }}))
+2025-10-31T21:40:31.165917Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/console/src/components/panels/ApiMissionsPanel.tsx")}
+2025-10-31T21:40:31.165929Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/console"), path: AnchoredSystemPathBuf("apps/console") }}))
+2025-10-31T21:40:40.865914Z  WARN turborepo_lib::package_changes_watcher: changed_files: {AnchoredSystemPathBuf("apps/console/src/components/panels/TracksPanel.tsx")}
+2025-10-31T21:40:40.865976Z  WARN turborepo_lib::package_changes_watcher: changed_packages: Ok(Some({WorkspacePackage { name: Other("@bigmt/console"), path: AnchoredSystemPathBuf("apps/console") }}))

@@ -122,9 +122,11 @@ async def create_mission(mission: MissionIn, request: Request, db: Session = Dep
         except Exception:
             pass
 
-        # Broadcast over WebSocket
+        # Broadcast over WebSocket + bus
         try:
-            await request.app.state.broadcast_event({"type": "mission_created", "mission": out.model_dump()})
+            payload = {"type": "mission_created", "mission": out.model_dump()}
+            await request.app.state.broadcast_event(payload)
+            await request.app.state.bus.publish("missions", payload)
         except Exception:
             pass
 
@@ -216,9 +218,11 @@ async def update_mission(mission_id: str, body: MissionUpdateIn, request: Reques
             mqtt_client.publish(MISSIONS_TOPIC, out.model_dump_json(), qos=0)
         except Exception:
             pass
-        # Broadcast over WebSocket
+        # Broadcast over WebSocket + bus
         try:
-            await request.app.state.broadcast_event({"type": "mission_updated", "mission": out.model_dump()})
+            payload = {"type": "mission_updated", "mission": out.model_dump()}
+            await request.app.state.broadcast_event(payload)
+            await request.app.state.bus.publish("missions", payload)
         except Exception:
             pass
 

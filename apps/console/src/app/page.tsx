@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { 
@@ -27,14 +28,15 @@ import {
 } from 'lucide-react'
 import { Sliders } from 'lucide-react'
 import { AlertsPanel } from '../components/panels/AlertsPanel'
-import { DevicesPanel } from '../components/panels/DevicesPanel'
-import { MissionsPanel } from '../components/panels/MissionsPanel'
+import { TracksPanel as DevicesPanel } from '../components/panels/TracksPanel'
+import { ApiMissionsPanel as MissionsPanel } from '../components/panels/ApiMissionsPanel'
 import { DroneControlPanel } from '../components/controls/DroneControlPanel'
 import { KOFAMissionPanel } from '../components/controls/KOFAMissionPanel'
 import { VideoFeedPanel } from '../components/panels/VideoFeedPanel'
 import { SettingsPanel } from '../components/panels/SettingsPanel'
 import { ToastProvider } from '../components/ui/Toast'
 import { useBackendConnectivity } from '../hooks/useSummit'
+import { useFeature } from '../flags/FeatureFlags'
 
 const queryClient = new QueryClient()
 
@@ -46,6 +48,12 @@ function HomePageContent() {
   const [mapPoppedOut, setMapPoppedOut] = useState(false)
   const [popupWindow, setPopupWindow] = useState<Window | null>(null)
   const { mqttConnected, wsConnected } = useBackendConnectivity()
+
+  // Feature gates
+  const showRisk = useFeature('ui.widgets.fireProgress', true)
+  const showDeployment = useFeature('mission.templates.emberDamp', true)
+  const showControl = useFeature('mission.templates.emberDamp', true)
+  const showChaos = useFeature('ui.widgets.chaosLab', true)
 
   const openPopupWindow = () => {
     const popup = window.open('', 'mapPopup', 'width=1200,height=800,resizable=yes,scrollbars=yes,status=yes')
@@ -265,11 +273,33 @@ function HomePageContent() {
                   <span className="text-xs font-bold text-white">3</span>
                 </div>
               </button>
-                  <button
+              <button
                     onClick={() => setOverlayVisible(!overlayVisible)}
                     className="p-2 rounded-md hover:bg-dark-700 transition-colors"
                   >
                     <Layers className="w-5 h-5 text-tactical-400" />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const api = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+                      const lat = 40.0 + (Math.random() - 0.5) * 0.01
+                      const lon = -120.0 + (Math.random() - 0.5) * 0.01
+                      const payload = {
+                        type: 'fire',
+                        confidence: 0.9,
+                        lat,
+                        lon,
+                        timestamp: new Date().toISOString(),
+                        source_id: 'console-sim'
+                      }
+                      try {
+                        await fetch(`${api}/api/v1/detections/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+                      } catch (e) { console.error('simulate detection failed', e) }
+                    }}
+                    className="p-2 rounded-md hover:bg-dark-700 transition-colors"
+                    title="Simulate detection"
+                  >
+                    <Flame className="w-5 h-5 text-fire-400" />
                   </button>
                   <button
                     onClick={openPopupWindow}
@@ -321,15 +351,17 @@ function HomePageContent() {
                   <Plane className="w-5 h-5 text-tactical-400" />
                   <span className="text-sm font-mono text-tactical-300">DEVICES</span>
                 </button>
-                <button
-                  onClick={() => setActivePanel('risk')}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
-                    activePanel === 'risk' ? 'bg-warning-500/20 border border-warning-500/30 shadow-glow' : 'hover:bg-dark-800'
-                  }`}
-                >
-                  <Flame className="w-5 h-5 text-warning-400" />
-                  <span className="text-sm font-mono text-tactical-300">RISK MODEL</span>
-                </button>
+                {showRisk && (
+                  <button
+                    onClick={() => setActivePanel('risk')}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                      activePanel === 'risk' ? 'bg-warning-500/20 border border-warning-500/30 shadow-glow' : 'hover:bg-dark-800'
+                    }`}
+                  >
+                    <Flame className="w-5 h-5 text-warning-400" />
+                    <span className="text-sm font-mono text-tactical-300">RISK MODEL</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setActivePanel('weather')}
                   className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
@@ -357,15 +389,17 @@ function HomePageContent() {
                   <Target className="w-5 h-5 text-fire-400" />
                   <span className="text-sm font-mono text-tactical-300">SPREAD MODEL</span>
                 </button>
-                <button
-                  onClick={() => setActivePanel('deployment')}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
-                    activePanel === 'deployment' ? 'bg-tacticalGreen-500/20 border border-tacticalGreen-500/30 shadow-glow' : 'hover:bg-dark-800'
-                  }`}
-                >
-                  <Zap className="w-5 h-5 text-tacticalGreen-400" />
-                  <span className="text-sm font-mono text-tactical-300">DEPLOY</span>
-                </button>
+                {showDeployment && (
+                  <button
+                    onClick={() => setActivePanel('deployment')}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                      activePanel === 'deployment' ? 'bg-tacticalGreen-500/20 border border-tacticalGreen-500/30 shadow-glow' : 'hover:bg-dark-800'
+                    }`}
+                  >
+                    <Zap className="w-5 h-5 text-tacticalGreen-400" />
+                    <span className="text-sm font-mono text-tactical-300">DEPLOY</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setActivePanel('missions')}
                   className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
@@ -384,15 +418,17 @@ function HomePageContent() {
                   <Settings className="w-5 h-5 text-tactical-400" />
                   <span className="text-sm font-mono text-tactical-300">SETTINGS</span>
                 </button>
-                <button
-                  onClick={() => setActivePanel('control')}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
-                    activePanel === 'control' ? 'bg-tactical-500/20 border border-tactical-500/30 shadow-glow' : 'hover:bg-dark-800'
-                  }`}
-                >
-                  <Zap className="w-5 h-5 text-tactical-400" />
-                  <span className="text-sm font-mono text-tactical-300">CONTROL</span>
-                </button>
+                {showControl && (
+                  <button
+                    onClick={() => setActivePanel('control')}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                      activePanel === 'control' ? 'bg-tactical-500/20 border border-tactical-500/30 shadow-glow' : 'hover:bg-dark-800'
+                    }`}
+                  >
+                    <Zap className="w-5 h-5 text-tactical-400" />
+                    <span className="text-sm font-mono text-tactical-300">CONTROL</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setActivePanel('video')}
                   className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
@@ -411,15 +447,17 @@ function HomePageContent() {
                   <Shield className="w-5 h-5 text-warning-400" />
                   <span className="text-sm font-mono text-tactical-300">INTELLIGENCE</span>
                 </button>
-                <button
-                  onClick={() => setActivePanel('chaos')}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
-                    activePanel === 'chaos' ? 'bg-tactical-500/20 border border-tactical-500/30 shadow-glow' : 'hover:bg-dark-800'
-                  }`}
-                >
-                  <Sliders className="w-5 h-5 text-tactical-400" />
-                  <span className="text-sm font-mono text-tactical-300">CHAOS LAB</span>
-                </button>
+                {showChaos && (
+                  <button
+                    onClick={() => setActivePanel('chaos')}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${
+                      activePanel === 'chaos' ? 'bg-tactical-500/20 border border-tactical-500/30 shadow-glow' : 'hover:bg-dark-800'
+                    }`}
+                  >
+                    <Sliders className="w-5 h-5 text-tactical-400" />
+                    <span className="text-sm font-mono text-tactical-300">CHAOS LAB</span>
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -674,7 +712,7 @@ function HomePageContent() {
                     <SettingsPanel />
                   )}
                   
-                  {activePanel === 'risk' && (
+                  {showRisk && activePanel === 'risk' && (
                     <div className="h-full flex flex-col">
                       <div className="px-4 py-3 border-b border-dark-700">
                         <h2 className="text-lg font-bold text-tactical-400">RISK MODELING</h2>
@@ -922,7 +960,7 @@ function HomePageContent() {
                     </div>
                   )}
                   
-                  {activePanel === 'deployment' && (
+                  {showDeployment && activePanel === 'deployment' && (
                     <div className="h-full flex flex-col">
                       <div className="px-4 py-3 border-b border-dark-700">
                         <h2 className="text-lg font-bold text-tactical-400">AUTONOMOUS DEPLOYMENT</h2>
@@ -1004,7 +1042,7 @@ function HomePageContent() {
                   
                   {activePanel === 'missions' && <MissionsPanel />}
                   
-                  {activePanel === 'control' && (
+                  {showControl && activePanel === 'control' && (
                     <div className="h-full flex flex-col">
                       <div className="px-4 py-3 border-b border-dark-700">
                         <h2 className="text-lg font-bold text-tactical-400">DEVICE CONTROL</h2>
@@ -1032,7 +1070,7 @@ function HomePageContent() {
                   
                   {activePanel === 'video' && <VideoFeedPanel />}
                   
-                  {activePanel === 'chaos' && (
+                  {showChaos && activePanel === 'chaos' && (
                     <div className="h-full flex flex-col">
                       <div className="px-4 py-3 border-b border-dark-700">
                         <h2 className="text-lg font-bold text-tactical-400">CHAOS LAB</h2>

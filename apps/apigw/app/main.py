@@ -58,6 +58,10 @@ async def lifespan(app: FastAPI):
     # Admin flags
     app.state.require_confirm = (os.getenv("DISPATCHER_REQUIRE_CONFIRM", "false").lower() in ("1", "true", "yes"))
 
+    # Init in-memory bus
+    from app.bus import InMemoryBus
+    app.state.bus = InMemoryBus()
+
     # Background task: broadcast heartbeat events to websockets
     stop_event = asyncio.Event()
 
@@ -153,6 +157,9 @@ async def websocket_events(ws: WebSocket):
 # Optional routers (load if available)
 for _name, _prefix, _tags in [
     ("app.routers.detections", "/api/v1/detections", ["detections"]),
+    ("app.routers.tasks", "/api/v1/tasks", ["tasks"]),
+    ("app.routers.twin", "/api/v1/twin", ["twin"]),
+    ("app.routers.summit", "/api/v1/summit", ["summit"]),
     ("app.routers.alerts", "/api/v1/alerts", ["alerts"]),
     ("app.routers.triangulation", "/api/v1/triangulation", ["triangulation"]),
     ("app.routers.prediction", "/api/v1/prediction", ["prediction"]),
