@@ -1,0 +1,50 @@
+{
+  "domain": { "pack": "wildfire" },
+  "terminology": { "theme": "wildfire" },
+  "ui": {
+    "routes": { "wildfire": true, "agriculture": false, "oilgas": false },
+    "widgets": {
+      "fireProgress": true,
+      "yieldEstimator": false,
+      "leakProbability": false,
+      "chaosLab": true
+    },
+    "map": {
+      "layers": {
+        "fireBehaviorOverlay": true,
+        "ndviOverlay": false,
+        "methanePlumeOverlay": false,
+        "airspaceBlocks": true,
+        "criticalAssets": true
+      }
+    }
+  },
+  "detection": {
+    "models": {
+      "wildfire_smoke": true,
+      "thermal_hotspot": true,
+      "crop_stress": false,
+      "methane_plume": false
+    }
+  },
+  "mission": {
+    "templates": {
+      "emberDamp": true,
+      "assetWet": true,
+      "fieldSpray": false,
+      "pipelinePatrol": false,
+      "leakInvestigation": false
+    }
+  },
+  "policy": { "roe": { "id": "roe_wildfire_v1" }, "humanApprovalRequired": true },
+  "autonomy": { "constraints": { "daylightOnly": true, "maxWindMps": 12 } },
+  "payloads": { "supported": ["emberwing", "camera"] },
+  "telemetry": { "units": "imperial" },
+  "reporting": {
+    "templates": {
+      "afterActionReport": true,
+      "cropTreatmentSummary": false,
+      "leakInvestigationReport": false
+    }
+  }
+}
