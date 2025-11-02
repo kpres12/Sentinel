@@ -162,21 +162,33 @@ class SummitClient {
     }
   }
 
-  async getPrediction(scenario: any): Promise<any> {
+  async getPrediction(input: { lat: number; lng: number; hours?: number; windSpeedMps?: number; windDirDeg?: number }): Promise<any> {
     try {
-      const response = await fetch(`${this.apiUrl}/api/v1/predict/scenario`, {
+      const body = {
+        ignition_points: [{ latitude: input.lat, longitude: input.lng }],
+        conditions: {
+          wind_speed_mps: input.windSpeedMps ?? 5,
+          wind_direction_deg: input.windDirDeg ?? 180,
+          temperature_c: 25,
+          relative_humidity: 40,
+          fuel_moisture: 0.08,
+          fuel_model: 'grass'
+        },
+        simulation_hours: input.hours ?? 1,
+        time_step_minutes: 15,
+        monte_carlo_runs: 100
+      }
+      const response = await fetch(`${this.apiUrl}/api/v1/prediction/simulate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(scenario)
+        body: JSON.stringify(body)
       })
-      
       if (!response.ok) {
         throw new Error(`Failed to get prediction: ${response.statusText}`)
       }
-      
       return await response.json()
     } catch (error) {
       console.error('Error getting prediction:', error)
