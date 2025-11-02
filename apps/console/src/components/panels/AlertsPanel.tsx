@@ -139,19 +139,25 @@ export function AlertsPanel() {
             </div>
           ) : (
             alerts.map((alert) => {
-              const AlertIcon = getAlertIcon(alert.severity)
+              const severity = String(alert?.severity ?? 'medium')
+              const typeLabel = String(alert?.type ?? 'unknown').toUpperCase()
+              const title = alert?.title ?? 'Alert'
+              const description = alert?.description ?? ''
+              const lat = alert?.location?.lat
+              const lng = alert?.location?.lng
+              const AlertIcon = getAlertIcon(severity)
               return (
-                <div key={alert.id} className={`tactical-panel p-4 rounded-lg border-l-4 ${getAlertBg(alert.severity)}`}>
+                <div key={alert.id ?? Math.random().toString(36)} className={`tactical-panel p-4 rounded-lg border-l-4 ${getAlertBg(severity)}`}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-3">
-                      <AlertIcon className={`w-5 h-5 ${getAlertColor(alert.severity)} mt-0.5`} />
+                      <AlertIcon className={`w-5 h-5 ${getAlertColor(severity)} mt-0.5`} />
                       <div className="flex-1">
-                        <h3 className="font-mono text-sm text-tactical-300 mb-1">{alert.title}</h3>
-                        <p className="text-xs text-tactical-muted font-mono mb-2">{alert.description}</p>
+                        <h3 className="font-mono text-sm text-tactical-300 mb-1">{title}</h3>
+                        <p className="text-xs text-tactical-muted font-mono mb-2">{description}</p>
                         <div className="flex items-center gap-4 text-xs font-mono">
-                          <span className="text-tactical-muted">TYPE: {alert.type.toUpperCase()}</span>
-                          <span className={`${getStatusColor(alert.acknowledged)}`}>
-                            {alert.acknowledged ? 'ACKNOWLEDGED' : 'ACTIVE'}
+                          <span className="text-tactical-muted">TYPE: {typeLabel}</span>
+                          <span className={`${getStatusColor(!!alert?.acknowledged)}`}>
+                            {alert?.acknowledged ? 'ACKNOWLEDGED' : 'ACTIVE'}
                           </span>
                         </div>
                       </div>
@@ -159,16 +165,20 @@ export function AlertsPanel() {
                     <div className="text-right">
                       <div className="flex items-center gap-2 text-xs font-mono text-tactical-muted mb-1">
                         <Clock className="w-3 h-3" />
-                        <span>{format(new Date(alert.timestamp), 'HH:mm:ss')}</span>
+                        <span>{alert?.timestamp ? format(new Date(alert.timestamp), 'HH:mm:ss') : 'N/A'}</span>
                       </div>
-                      <span className="text-xs font-mono text-tactical-400">{alert.severity.toUpperCase()}</span>
+                      <span className="text-xs font-mono text-tactical-400">{String(severity).toUpperCase()}</span>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs font-mono text-tactical-muted">
                       <MapPin className="w-3 h-3" />
-                      <span>{alert.location.lat.toFixed(3)}°N, {alert.location.lng.toFixed(3)}°W</span>
+                      <span>
+                        {typeof lat === 'number' && typeof lng === 'number' 
+                          ? `${lat.toFixed(3)}°N, ${lng.toFixed(3)}°W`
+                          : 'Location N/A'}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button className="p-1 rounded hover:bg-dark-700 transition-colors">
@@ -177,7 +187,7 @@ export function AlertsPanel() {
                       <button className="p-1 rounded hover:bg-dark-700 transition-colors">
                         <Target className="w-3 h-3 text-tactical-400" />
                       </button>
-                      {!alert.acknowledged && (
+                      {!alert?.acknowledged && alert?.id && (
                         <button 
                           onClick={() => handleAcknowledge(alert.id)}
                           disabled={isAcknowledging}
@@ -205,7 +215,14 @@ export function AlertsPanel() {
               </div>
               <p className="text-xs text-tactical-muted font-mono">LOCATE SMOKE SOURCE</p>
             </button>
-            <button className="tactical-panel p-3 rounded-lg hover:bg-dark-700 transition-colors">
+            <button
+              onClick={async () => {
+                const target = alerts[0]?.location || { lat: 40.0, lng: -120.0, radius: 200 }
+                const { summitClient } = await import('../../lib/summitClient')
+                const res = await summitClient.getPrediction({ lat: target.lat, lng: target.lng })
+                if (res) console.log('Prediction result', res)
+              }}
+              className="tactical-panel p-3 rounded-lg hover:bg-dark-700 transition-colors">
               <div className="flex items-center gap-2 mb-2">
                 <Wind className="w-4 h-4 text-tactical-400" />
                 <span className="text-sm font-mono text-tactical-300">SIMULATE</span>

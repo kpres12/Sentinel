@@ -16,6 +16,7 @@ const MISSIONS_TOPIC = process.env.DISPATCHER_MISSIONS_TOPIC || 'missions/update
 
 const SUMMIT_API_URL = process.env.SUMMIT_API_URL || 'http://localhost:8000';
 const SUMMIT_API_KEY = process.env.SUMMIT_API_KEY || '';
+const ENABLE_ML_SCORING = String(process.env.DISPATCHER_ENABLE_ML_SCORING || 'false').toLowerCase() === 'true';
 
 const MIN_CONFIDENCE = Number(process.env.DISPATCHER_MIN_CONFIDENCE || 0.8);
 const REQUIRE_CONFIRM = String(process.env.DISPATCHER_REQUIRE_CONFIRM || 'false').toLowerCase() === 'true';
@@ -47,6 +48,33 @@ function getLatLonFromAlert(msg: AlertPayload | TriangulationResult): { lat: num
     return { lat: (msg as any).latitude, lon: (msg as any).longitude, confidence: (msg as any).confidence };
   }
   return null;
+}
+
+async function fetchPredictionConfidence(lat: number, lon: number): Promise<number | null> {
+  try {
+    const headers: any = { 'Content-Type': 'application/json' };
+    if (SUMMIT_API_KEY) headers['Authorization'] = `Bearer ${SUMMIT_API_KEY}`;
+    const body = {
+      ignition_points: [{ latitude: lat, longitude: lon }],
+      conditions: {
+        wind_speed_mps: 5,
+        wind_direction_deg: 180,
+        temperature_c: 25,
+        relative_humidity: 40,
+        fuel_moisture: 0.08,
+        fuel_model: 'grass'
+      },
+      simulation_hours: 1,
+      time_step_minutes: 15,
+      monte_carlo_runs: 100
+    };
+    const res = await axios.post(`${SUMMIT_API_URL}/api/v1/prediction/simulate`, body, { headers });
+    const conf = res.data?.confidence?.overall_confidence;
+    if (typeof conf === 'number' && !Number.isNaN(conf)) return conf;
+    return null;
+  } catch (e) {
+    return null;
+  }
 }
 
 function circleWaypoints(lat: number, lon: number, radiusMeters: number, count: number = 3) {
@@ -114,9 +142,19 @@ async function handleMessage(raw: string, source: 'alert' | 'triangulation', mqt
       return;
     }
 
+    // Optional ML scoring to refine confidence
+    let effectiveConfidence = confidence;
+    if (ENABLE_ML_SCORING) {
+      const mlConf = await fetchPredictionConfidence(loc.lat, loc.lon);
+      if (typeof mlConf === 'number') {
+        // Combine: take max to avoid downgrading, clamp [0,1]
+        effectiveConfidence = Math.max(effectiveConfidence ?? 0, Math.max(0, Math.min(1, mlConf)));
+      }
+    }
+
     const ctx: DispatchContext = {
       target: { lat: loc.lat, lon: loc.lon },
-      confidence: confidence,
+      confidence: effectiveConfidence,
       minConfidence: MIN_CONFIDENCE,
       environment: {
         windSpeedMps: undefined,
