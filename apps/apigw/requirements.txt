@@ -8,7 +8,8 @@ pydantic==2.5.0
 pydantic-settings==2.1.0
 grpcio==1.60.0
 grpcio-tools==1.60.0
-redis==5.0.1
+redis[async]==5.0.1
+PyJWT==2.8.0
 celery==5.3.4
 paho-mqtt==1.6.1
 httpx==0.25.2

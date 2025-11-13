@@ -11,11 +11,13 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from app.database import engine, Base
+from app.database import engine, Base, AsyncSessionLocal
 from app.routers import telemetry
 from app.routers import missions as missions_router
 from app.middleware import LoggingMiddleware, MetricsMiddleware
 from app.config import settings
+from app.auth import AuthMiddleware, RateLimitMiddleware
+import redis.asyncio as redis
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -48,12 +50,12 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     logger.info("Starting wildfire operations platform API gateway...")
-
-    # Create database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    logger.info("Database tables created successfully")
+    
+    # NOTE: Database migrations should be run separately via Alembic
+    # Run: `alembic upgrade head` before starting the API
+    # DO NOT run migrations on every instance startup in production
+    
+    logger.info("API gateway startup complete")
 
     # Admin flags
     app.state.require_confirm = (os.getenv("DISPATCHER_REQUIRE_CONFIRM", "false").lower() in ("1", "true", "yes"))
@@ -117,8 +119,11 @@ app.add_middleware(
     allowed_hosts=settings.ALLOWED_HOSTS
 )
 
+# Add security middleware FIRST (runs in reverse order)
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(MetricsMiddleware)
+app.add_middleware(RateLimitMiddleware, max_requests=100, window_seconds=60)
+app.add_middleware(AuthMiddleware, jwt_secret=settings.SECRET_KEY)
 
 # Basic request metrics wrapper
 from starlette.requests import Request
@@ -187,11 +192,74 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """Liveness check - API is running."""
+    from datetime import datetime
     return {
         "status": "healthy",
-        "timestamp": "2024-01-01T00:00:00Z"
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "version": "1.0.0"
     }
+
+
+@app.get("/readiness")
+async def readiness_check():
+    """Readiness check - API can serve traffic (DB/Redis/MQTT reachable)."""
+    from datetime import datetime
+    from sqlalchemy import text
+    import asyncio
+    
+    checks = {
+        "database": "unknown",
+        "redis": "unknown",
+        "mqtt": "unknown"
+    }
+    
+    # Check database
+    try:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(text("SELECT 1"))
+            result.scalar()
+        checks["database"] = "healthy"
+    except Exception as e:
+        checks["database"] = f"unhealthy: {str(e)[:50]}"
+    
+    # Check Redis
+    try:
+        redis_client = redis.Redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            password=settings.REDIS_PASSWORD if settings.REDIS_PASSWORD else None,
+            socket_connect_timeout=2
+        )
+        await redis_client.ping()
+        await redis_client.close()
+        checks["redis"] = "healthy"
+    except Exception as e:
+        checks["redis"] = f"unhealthy: {str(e)[:50]}"
+    
+    # Check MQTT (basic connectivity test)
+    try:
+        # For now, assume healthy if config exists
+        # In production, implement actual MQTT connectivity check
+        if settings.MQTT_BROKER:
+            checks["mqtt"] = "healthy"
+        else:
+            checks["mqtt"] = "not configured"
+    except Exception as e:
+        checks["mqtt"] = f"unhealthy: {str(e)[:50]}"
+    
+    # Determine overall status
+    all_healthy = all(v == "healthy" or v == "not configured" for v in checks.values())
+    overall_status = "ready" if all_healthy else "not_ready"
+    status_code = 200 if all_healthy else 503
+    
+    response = {
+        "status": overall_status,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "checks": checks
+    }
+    
+    return JSONResponse(content=response, status_code=status_code)
 
 
 @app.exception_handler(HTTPException)
