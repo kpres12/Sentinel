@@ -93,21 +93,65 @@ check_prerequisites() {
 validate_environment() {
     log_info "Validating environment configuration..."
     
+    # Load .env.production if it exists
+    if [ -f "$PROJECT_ROOT/.env.production" ]; then
+        log_info "Loading environment from .env.production"
+        set -a
+        source "$PROJECT_ROOT/.env.production"
+        set +a
+    else
+        log_error ".env.production file not found at $PROJECT_ROOT/.env.production"
+        log_error "Create it from .env.production.template and fill in all required values"
+        exit 1
+    fi
+    
     # Check required environment variables
     local required_vars=(
         "DATABASE_URL"
-        "JWT_SECRET"
-        "SUMMIT_API_KEY"
-        "MQTT_PASSWORD"
-        "ENCRYPTION_KEY"
+        "SECRET_KEY"
+        "POSTGRES_PASSWORD"
+        "REDIS_PASSWORD"
+        "EMQX_PASSWORD"
+        "ALLOWED_ORIGINS"
+        "ALLOWED_HOSTS"
+        "NEXT_PUBLIC_API_URL"
+        "NEXT_PUBLIC_MQTT_WS_URL"
     )
     
+    local missing_vars=()
     for var in "${required_vars[@]}"; do
         if [ -z "${!var:-}" ]; then
-            log_error "Required environment variable $var is not set"
+            missing_vars+=("$var")
+        fi
+    done
+    
+    if [ ${#missing_vars[@]} -gt 0 ]; then
+        log_error "Required environment variables are not set:"
+        for var in "${missing_vars[@]}"; do
+            log_error "  - $var"
+        done
+        log_error "Please set these in .env.production"
+        exit 1
+    fi
+    
+    # Validate no default passwords are used
+    local insecure_passwords=("wildfire123" "admin123" "password" "your-secret-key-here")
+    for insecure in "${insecure_passwords[@]}"; do
+        if [[ "$DATABASE_URL" == *"$insecure"* ]] || 
+           [[ "$POSTGRES_PASSWORD" == *"$insecure"* ]] ||
+           [[ "$SECRET_KEY" == *"$insecure"* ]]; then
+            log_error "Insecure default password detected: $insecure"
+            log_error "Please generate secure passwords before deploying"
             exit 1
         fi
     done
+    
+    # Validate ALLOWED_HOSTS doesn't contain wildcard
+    if [[ "$ALLOWED_HOSTS" == *"*"* ]]; then
+        log_error "ALLOWED_HOSTS contains wildcard '*' which is insecure in production"
+        log_error "Please specify exact hostnames"
+        exit 1
+    fi
     
     # Validate secrets exist in Kubernetes
     local required_secrets=(
@@ -164,12 +208,25 @@ backup_current_deployment() {
 build_and_push_images() {
     log_info "Building and pushing Docker images..."
     
+    # Validate AWS credentials and account ID
+    if [ -z "${AWS_ACCOUNT_ID:-}" ]; then
+        log_error "AWS_ACCOUNT_ID environment variable is not set"
+        exit 1
+    fi
+    
     # Set image registry
     local registry="${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
     local tag="${GITHUB_SHA:-$(git rev-parse HEAD)}"
     
+    log_info "Using registry: $registry"
+    log_info "Image tag: $tag"
+    
     # Login to ECR
-    aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$registry"
+    log_info "Logging in to AWS ECR..."
+    if ! aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$registry" 2>&1; then
+        log_error "Failed to login to AWS ECR. Check AWS credentials and permissions"
+        exit 1
+    fi
     
     # Build images
     local services=("console" "apigw" "edge-agent" "summit-integration")
@@ -333,21 +390,35 @@ verify_deployment() {
 rollback_deployment() {
     log_warning "Rolling back deployment..."
     
-    # Get previous revision
-    local previous_revision=$(kubectl rollout history deployment/wildfire-api-gateway -n "$NAMESPACE" | tail -2 | head -1 | awk '{print $1}')
+    # Check if deployments exist before attempting rollback
+    if ! kubectl get deployment wildfire-api-gateway -n "$NAMESPACE" &> /dev/null; then
+        log_error "No existing deployment found - cannot rollback first deployment"
+        log_error "Manual cleanup may be required"
+        return 1
+    fi
     
-    if [ -n "$previous_revision" ]; then
-        # Rollback all deployments
-        kubectl rollout undo deployment/wildfire-api-gateway -n "$NAMESPACE" --to-revision="$previous_revision"
-        kubectl rollout undo deployment/wildfire-console -n "$NAMESPACE" --to-revision="$previous_revision"
-        
-        # Wait for rollback to complete
-        kubectl rollout status deployment/wildfire-api-gateway -n "$NAMESPACE" --timeout=300s
-        kubectl rollout status deployment/wildfire-console -n "$NAMESPACE" --timeout=300s
-        
-        log_success "Rollback completed"
+    # Get rollout history
+    local history=$(kubectl rollout history deployment/wildfire-api-gateway -n "$NAMESPACE" 2>/dev/null | grep -v REVISION | wc -l)
+    
+    if [ "$history" -lt 2 ]; then
+        log_error "No previous revision found for rollback (this may be the first deployment)"
+        log_error "Manual rollback required - consider deleting failed resources"
+        return 1
+    fi
+    
+    # Rollback deployments
+    log_info "Rolling back to previous revision..."
+    kubectl rollout undo deployment/wildfire-api-gateway -n "$NAMESPACE" || log_error "Failed to rollback api-gateway"
+    kubectl rollout undo deployment/wildfire-console -n "$NAMESPACE" || log_error "Failed to rollback console"
+    
+    # Wait for rollback to complete
+    if kubectl rollout status deployment/wildfire-api-gateway -n "$NAMESPACE" --timeout=300s && \
+       kubectl rollout status deployment/wildfire-console -n "$NAMESPACE" --timeout=300s; then
+        log_success "Rollback completed successfully"
+        return 0
     else
-        log_error "No previous revision found for rollback"
+        log_error "Rollback failed or timed out"
+        return 1
     fi
 }
 
@@ -373,12 +444,7 @@ main() {
     log_info "Namespace: $NAMESPACE"
     log_info "Region: $REGION"
     
-    # Load environment variables
-    if [ -f "$PROJECT_ROOT/.env.production" ]; then
-        source "$PROJECT_ROOT/.env.production"
-    fi
-    
-    # Deployment steps
+    # Deployment steps (validate_environment will load .env.production)
     check_prerequisites
     validate_environment
     backup_current_deployment

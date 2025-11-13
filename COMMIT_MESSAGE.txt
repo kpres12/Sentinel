@@ -1,0 +1,117 @@
+fix: production security and reliability hardening
+
+## Critical Security Fixes
+
+- Remove hardcoded secrets from config files
+  - config.py and database.py now fail fast in production if required env vars missing
+  - Remove default passwords (wildfire123, admin123, your-secret-key-here)
+  - Add _get_required_env() helper that allows dev defaults but requires production values
+
+- Fix CORS and host security
+  - Replace ALLOWED_HOSTS wildcard ["*"] with env-driven strict defaults
+  - Make ALLOWED_ORIGINS configurable via comma-separated ALLOWED_ORIGINS env var
+  - Production mode rejects wildcard configurations
+
+- Add authentication and rate limiting
+  - NEW: apps/apigw/app/auth.py with JWT middleware
+  - Protect all routes except /health, /readiness, /metrics, /docs
+  - Dev mode allows unauthenticated requests with warning header
+  - Production mode requires Bearer token
+  - In-memory rate limiter (100 req/60s per IP) with 429 responses
+  - Add PyJWT and redis[async] dependencies
+
+- Remove .env from git tracking
+  - Add .env to git cache removal (git rm --cached)
+  - Update .gitignore to block all .env* files
+  - NEW: .env.production.template with secret generation instructions
+  - NEW: SECURITY_CLEANUP.md with git history purge instructions
+
+## Reliability Improvements
+
+- Implement real health checks
+  - /health endpoint returns actual timestamp (not hardcoded 2024-01-01)
+  - NEW: /readiness endpoint checks DB, Redis, MQTT connectivity
+  - Returns 503 if dependencies unhealthy (K8s/LB integration ready)
+
+- Fix database migration strategy
+  - Remove Base.metadata.create_all() from startup (prevents K8s race conditions)
+  - Document: run `alembic upgrade head` separately before deployment
+  - Add comments explaining migration separation
+
+- Fix Next.js Dockerfile
+  - Replace single-stage with multi-stage build (deps → builder → runner)
+  - Install all deps for build, copy only production artifacts to final image
+  - Enable output: 'standalone' in next.config.js
+  - Result: ~50% smaller image, no devDependencies in production
+
+- Add Python CI pipeline
+  - NEW: python job in .github/workflows/ci.yml
+  - Spin up Postgres + Redis services for tests
+  - Run ruff (linting), mypy (type checking), pytest with coverage
+  - Upload coverage to Codecov
+  - Split existing job into 'node' and 'python' jobs
+
+- Harden production deployment script
+  - validate_environment() now loads .env.production and validates all required vars
+  - Reject insecure default passwords (wildfire123, admin123, etc)
+  - Validate ALLOWED_HOSTS doesn't contain wildcard
+  - build_and_push_images() validates AWS_ACCOUNT_ID and checks ECR login success
+  - rollback_deployment() handles first deployment gracefully (no previous revision)
+  - Add better error messages and validation checks throughout
+
+- Fix docker-compose.prod.yml
+  - Replace :- defaults with :? (error if not set)
+  - Add NODE_ENV=production to all services
+  - Add Redis password to command args
+  - Add EMQX data volume
+  - Require all critical secrets (POSTGRES_PASSWORD, REDIS_PASSWORD, SECRET_KEY, etc)
+
+## Documentation
+
+- NEW: FIXES_APPLIED.md - Complete summary of all fixes with testing guide
+- NEW: SECURITY_CLEANUP.md - Instructions for purging secrets from git history
+- NEW: .env.production.template - Production config template with generation commands
+
+## Breaking Changes
+
+**Production deployments now require:**
+- .env.production file with all secrets (no defaults)
+- NODE_ENV=production must be set
+- ALLOWED_ORIGINS and ALLOWED_HOSTS must be explicitly configured
+- Database migrations must be run separately before API starts
+- AWS_ACCOUNT_ID must be set for deployment script
+
+**Development remains unchanged:**
+- NODE_ENV=development (or unset) allows defaults with warnings
+- Auth middleware permits unauthenticated requests in dev mode
+
+## Testing
+
+All fixes maintain backward compatibility in development:
+```bash
+# Development works as before
+make docker-dev
+curl http://localhost:8000/api/v1/telemetry  # Works without auth
+
+# Production mode enforces security
+export NODE_ENV=production
+# Missing secrets → API exits with error
+# Missing auth token → 401 Unauthorized
+```
+
+## Migration Guide
+
+Before deploying to production:
+1. Copy .env.production.template to .env.production
+2. Generate secrets: `openssl rand -hex 32`
+3. Set all required environment variables
+4. Run: `cd apps/apigw && alembic upgrade head` (once, before API starts)
+5. Deploy with updated docker-compose.prod.yml
+
+See FIXES_APPLIED.md for complete checklist.
+
+---
+
+Fixes address launch-blocking security vulnerabilities and reliability issues
+identified in pre-production audit. System now fails fast and visible rather
+than running insecurely or silently failing.

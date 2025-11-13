@@ -8,11 +8,20 @@ from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# Database URL from environment
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://wildfire:wildfire123@localhost:5432/wildfire_ops"
-)
+# Database URL from environment - fail fast if missing in production
+def _get_database_url() -> str:
+    is_dev = os.getenv("NODE_ENV", "development") == "development"
+    url = os.getenv("DATABASE_URL")
+    
+    if url is None:
+        if is_dev:
+            print("WARNING: Using dev DATABASE_URL. Set this in production!", file=__import__('sys').stderr)
+            return "postgresql://wildfire:wildfire123@localhost:5432/wildfire_ops"
+        raise RuntimeError("DATABASE_URL environment variable is required in production")
+    
+    return url
+
+DATABASE_URL = _get_database_url()
 
 # Convert to async URL
 ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")

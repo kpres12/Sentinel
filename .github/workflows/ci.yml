@@ -7,7 +7,8 @@ on:
     branches: [ main, master ]
 
 jobs:
-  build:
+  node:
+    name: Node.js (TypeScript)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,3 +36,78 @@ jobs:
 
       - name: Build
         run: pnpm build
+  
+  python:
+    name: Python (FastAPI)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/apigw
+    
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_USER: wildfire
+          POSTGRES_PASSWORD: wildfire123
+          POSTGRES_DB: wildfire_ops_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: apps/apigw/requirements.txt
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov mypy ruff
+      
+      - name: Lint with ruff
+        run: ruff check app/ --output-format=github
+        continue-on-error: true
+      
+      - name: Type check with mypy
+        run: mypy app/ --ignore-missing-imports --no-strict-optional
+        continue-on-error: true
+      
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://wildfire:wildfire123@localhost:5432/wildfire_ops_test
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          NODE_ENV: test
+          SECRET_KEY: test-secret-key
+        run: |
+          pytest tests/ -v --cov=app --cov-report=term-missing --cov-report=xml
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          files: ./apps/apigw/coverage.xml
+          flags: python
+          name: python-coverage
