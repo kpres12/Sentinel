@@ -5,12 +5,15 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "protoc --js_out=import_style=commonjs,binary:dist --grpc-web_out=import_style=commonjs,mode=grpcwebtext:dist --ts_out=dist proto/*.proto",
+    "build": "mkdir -p dist && protoc --js_out=import_style=commonjs,binary:dist --grpc-web_out=import_style=commonjs,mode=grpcwebtext:dist --ts_out=dist proto/*.proto",
     "clean": "rm -rf dist"
   },
   "devDependencies": {
     "@types/google-protobuf": "^3.15.0",
     "grpc-web": "^1.4.0",
+    "protoc": "^33.2.0",
+    "protoc-gen-grpc-web": "^1.5.0",
+    "protoc-gen-js": "^3.21.4-4",
     "protoc-gen-ts": "^0.8.0"
   },
   "files": [

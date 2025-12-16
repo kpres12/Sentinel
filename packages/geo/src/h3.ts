@@ -2,7 +2,7 @@
  * H3 hexagon utilities for spatial indexing.
  */
 
-import { h3ToGeo, geoToH3, getHexagonAreaAvgKm2, getResolution } from 'h3-js';
+import { cellToLatLng, getHexagonAreaAvg, getResolution, latLngToCell } from 'h3-js';
 
 export interface H3Cell {
   index: string;
@@ -22,14 +22,14 @@ export function latLonToH3(
   longitude: number,
   resolution: number
 ): string {
-  return geoToH3(latitude, longitude, resolution);
+  return latLngToCell(latitude, longitude, resolution);
 }
 
 /**
  * Convert H3 cell to center lat/lon.
  */
 export function h3ToLatLon(h3Index: string): { latitude: number; longitude: number } {
-  const [lat, lon] = h3ToGeo(h3Index);
+  const [lat, lon] = cellToLatLng(h3Index);
   return { latitude: lat, longitude: lon };
 }
 
@@ -39,7 +39,7 @@ export function h3ToLatLon(h3Index: string): { latitude: number; longitude: numb
 export function getH3CellInfo(h3Index: string): H3Cell {
   const resolution = getResolution(h3Index);
   const center = h3ToLatLon(h3Index);
-  const areaKm2 = getHexagonAreaAvgKm2(resolution);
+  const areaKm2 = getHexagonAreaAvg(resolution, 'km2');
   
   return {
     index: h3Index,
@@ -66,7 +66,7 @@ export function getH3CellsInBounds(
   for (let lat = south; lat <= north; lat += step) {
     for (let lon = west; lon <= east; lon += step) {
       try {
-        const cell = geoToH3(lat, lon, resolution);
+        const cell = latLngToCell(lat, lon, resolution);
         if (!cells.includes(cell)) {
           cells.push(cell);
         }
@@ -97,7 +97,7 @@ export function getH3CellsInRadius(
     for (let lon = longitude - (radiusKm / (111 * Math.cos(latitude * Math.PI / 180))); 
          lon <= longitude + (radiusKm / (111 * Math.cos(latitude * Math.PI / 180))); lon += step) {
       try {
-        const cell = geoToH3(lat, lon, resolution);
+        const cell = latLngToCell(lat, lon, resolution);
         if (!cells.includes(cell)) {
           cells.push(cell);
         }
