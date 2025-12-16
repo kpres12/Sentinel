@@ -3,7 +3,14 @@
  * Main entry point for KOFA bot operations
  */
 
-import { FireLineBotController, BotMission, VegetationClearingParams, FireSuppressionParams, BuildLineParams } from '@bigmt/summit-integration';
+import {
+  FireLineBotController,
+  SummitClient,
+  BotMission,
+  VegetationClearingParams,
+  FireSuppressionParams,
+  BuildLineParams
+} from '@bigmt/summit-integration';
 import { Logger } from './Logger';
 import { Config } from './Config';
 import { BotMissionExecutor } from './BotMissionExecutor';
@@ -15,7 +22,7 @@ const config = new Config();
 async function main() {
   try {
     logger.info('Starting KOFA Bot Controller...');
-    
+
     // Load configuration
     const botConfig = {
       botId: config.get('BOT_ID', 'fireline-bot-001'),
@@ -32,14 +39,17 @@ async function main() {
       emergencyStopEnabled: config.getBoolean('BOT_EMERGENCY_STOP_ENABLED', true)
     };
 
-    // Create KOFA bot controller
-    const botController = new FireLineBotController({
+    // Summit.OS client (handles HTTP + optional WS)
+    const summitClient = new SummitClient({
       apiUrl: botConfig.summitApiUrl,
       apiKey: botConfig.summitApiKey,
       videoStreaming: false,
       offlineMode: true,
       reconnectInterval: 5000
     });
+
+    // Create KOFA bot controller
+    const botController = new FireLineBotController(summitClient);
 
     // Create mission executor
     const missionExecutor = new BotMissionExecutor(botController, botConfig);
@@ -76,7 +86,7 @@ async function main() {
     });
 
     // Connect to Summit.OS
-    await botController.connect();
+    await summitClient.connect();
 
     // Initialize bot capabilities
     await botController.initializeBotCapabilities(botConfig.botId);
@@ -89,14 +99,14 @@ async function main() {
     // Handle graceful shutdown
     process.on('SIGINT', async () => {
       logger.info('Received SIGINT, shutting down...');
-      await botController.disconnect();
+      await summitClient.disconnect();
       safetyMonitor.stop();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
       logger.info('Received SIGTERM, shutting down...');
-      await botController.disconnect();
+      await summitClient.disconnect();
       safetyMonitor.stop();
       process.exit(0);
     });
@@ -108,7 +118,7 @@ async function main() {
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled rejection at:', promise, 'reason:', reason);
+      logger.error('Unhandled rejection', { promise, reason });
       process.exit(1);
     });
 
