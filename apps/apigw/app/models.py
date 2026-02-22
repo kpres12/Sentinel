@@ -240,3 +240,102 @@ class Task(Base):
         Index('idx_tasks_device_status', 'device_id', 'status'),
         Index('idx_tasks_kind', 'kind'),
     )
+
+
+class User(Base):
+    """Platform users."""
+    __tablename__ = "users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email = Column(String(255), unique=True, nullable=False)
+    name = Column(String(255), nullable=False)
+    role = Column(String(20), nullable=False, default="observer")  # admin, ops, analyst, observer
+    hashed_password = Column(String(255))
+    oidc_sub = Column(String(255), unique=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_login = Column(DateTime(timezone=True))
+
+    __table_args__ = (
+        Index('idx_users_email', 'email'),
+        Index('idx_users_role', 'role'),
+    )
+
+
+class TriangulationResult(Base):
+    """Stored triangulation results."""
+    __tablename__ = "triangulation_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    observation_ids = Column(JSONB)
+    result_lat = Column(Float, nullable=False)
+    result_lon = Column(Float, nullable=False)
+    result_alt = Column(Float)
+    confidence = Column(Float, nullable=False)
+    uncertainty_m = Column(Float)
+    method = Column(String(50))
+    quality_metrics = Column(JSONB)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    geom = Column(Text)  # PostGIS POINT
+
+
+class PredictionResult(Base):
+    """Stored prediction/simulation results."""
+    __tablename__ = "prediction_results"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    simulation_id = Column(String(100), unique=True, nullable=False)
+    params = Column(JSONB)
+    perimeter = Column(JSONB)
+    isochrones = Column(JSONB)
+    total_area_ha = Column(Float)
+    max_spread_mph = Column(Float)
+    confidence = Column(Float)
+    statistics = Column(JSONB)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class AuditLog(Base):
+    """Audit trail of user actions."""
+    __tablename__ = "audit_log"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
+    action = Column(String(50), nullable=False)
+    resource_type = Column(String(50))
+    resource_id = Column(String(255))
+    details = Column(JSONB)
+    ip_address = Column(String(45))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", backref="audit_logs")
+
+
+class IngestRun(Base):
+    """Tracks data ingest runs."""
+    __tablename__ = "ingest_runs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source = Column(String(50), nullable=False)
+    status = Column(String(20), nullable=False, default="running")
+    records_fetched = Column(Integer, default=0)
+    started_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True))
+    error = Column(Text)
+
+
+class WeatherObservation(Base):
+    """Weather observation data from ingest."""
+    __tablename__ = "weather_observations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    station_id = Column(String(50), index=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+    temperature_c = Column(Float)
+    relative_humidity = Column(Float)
+    wind_speed_mps = Column(Float)
+    wind_direction_deg = Column(Float)
+    precipitation_mm = Column(Float)
+    source = Column(String(50))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    geom = Column(Text)  # PostGIS POINT

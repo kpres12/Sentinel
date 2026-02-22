@@ -4,7 +4,7 @@ Authentication and authorization middleware for FastAPI.
 
 import os
 from typing import Optional, List
-from fastapi import Request, HTTPException, status
+from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
 import jwt
@@ -133,33 +133,88 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 # Dependency for route-level auth
 security = HTTPBearer(auto_error=False)
 
+# Keycloak OIDC config (RS256 tokens)
+KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "http://localhost:8080")
+KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "wildfire-ops")
+KEYCLOAK_JWKS_URL = f"{KEYCLOAK_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/certs"
 
-async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = None) -> dict:
+_jwks_cache: dict = {}
+
+
+def _get_keycloak_public_key(token: str) -> Optional[str]:
+    """Fetch the signing key from Keycloak JWKS endpoint."""
+    import json
+    try:
+        from jose import jwk
+        from jose.utils import base64url_decode
+        import urllib.request
+
+        # Cache JWKS keys
+        if not _jwks_cache.get("keys"):
+            with urllib.request.urlopen(KEYCLOAK_JWKS_URL, timeout=5) as resp:
+                _jwks_cache["keys"] = json.loads(resp.read())
+
+        # Decode header to find kid
+        header = json.loads(
+            base64url_decode(token.split(".")[0].encode() + b"==")
+        )
+        kid = header.get("kid")
+        if not kid:
+            return None
+
+        for key_data in _jwks_cache["keys"].get("keys", []):
+            if key_data.get("kid") == kid:
+                return jwk.construct(key_data).to_pem().decode()
+    except Exception:
+        pass
+    return None
+
+
+async def get_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> dict:
     """
     Dependency to get current authenticated user from JWT token.
-    Use this on routes that need auth:
-    
+    Supports both Keycloak RS256 OIDC tokens and local HS256 tokens.
+
     @app.get("/protected")
     async def protected_route(user: dict = Depends(get_current_user)):
         return {"user": user}
     """
     is_dev = os.getenv("NODE_ENV", "development") == "development"
-    
+
     # In dev, allow requests without auth
     if is_dev and credentials is None:
         return {"sub": "dev-user", "role": "admin", "permissions": ["*"]}
-    
+
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
+    token = credentials.credentials
     jwt_secret = os.getenv("SECRET_KEY", "dev-secret-key-CHANGE-IN-PROD")
-    
+
+    # Try Keycloak RS256 first (OIDC tokens)
+    pem = _get_keycloak_public_key(token)
+    if pem:
+        try:
+            payload = jwt.decode(token, pem, algorithms=["RS256"], options={"verify_aud": False})
+            # Flatten Keycloak realm_access roles into a top-level "role" for convenience
+            roles = payload.get("realm_access", {}).get("roles", [])
+            for r in ["admin", "ops", "analyst", "observer"]:
+                if r in roles:
+                    payload["role"] = r
+                    break
+            return payload
+        except Exception:
+            pass  # Fall through to HS256
+
+    # Fallback: local HS256 token
     try:
-        payload = jwt.decode(credentials.credentials, jwt_secret, algorithms=["HS256"])
+        payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(

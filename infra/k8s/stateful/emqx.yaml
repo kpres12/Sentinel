@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: emqx
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-mqtt
+    tier: messaging
+spec:
+  serviceName: emqx
+  replicas: 3
+  selector:
+    matchLabels:
+      app: wildfire-mqtt
+  template:
+    metadata:
+      labels:
+        app: wildfire-mqtt
+        tier: messaging
+    spec:
+      containers:
+        - name: emqx
+          image: emqx/emqx:5.3.0
+          ports:
+            - containerPort: 1883
+              name: mqtt
+            - containerPort: 8083
+              name: ws
+            - containerPort: 8084
+              name: wss
+            - containerPort: 18083
+              name: dashboard
+            - containerPort: 4370
+              name: cluster
+          env:
+            - name: EMQX_NAME
+              value: wildfire-emqx
+            - name: EMQX_CLUSTER__DISCOVERY_STRATEGY
+              value: dns
+            - name: EMQX_CLUSTER__DNS__RECORD_TYPE
+              value: srv
+            - name: EMQX_CLUSTER__DNS__NAME
+              value: emqx-headless.wildfire-ops.svc.cluster.local
+            - name: EMQX_DASHBOARD__DEFAULT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: wildfire-secrets
+                  key: EMQX_USERNAME
+            - name: EMQX_DASHBOARD__DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wildfire-secrets
+                  key: EMQX_PASSWORD
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: emqx-data
+              mountPath: /opt/emqx/data
+          readinessProbe:
+            httpGet:
+              path: /api/v5/status
+              port: 18083
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v5/status
+              port: 18083
+            initialDelaySeconds: 30
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: emqx-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 10Gi
+---
+# Headless service for cluster discovery
+apiVersion: v1
+kind: Service
+metadata:
+  name: emqx-headless
+  namespace: wildfire-ops
+spec:
+  clusterIP: None
+  selector:
+    app: wildfire-mqtt
+  ports:
+    - name: mqtt
+      port: 1883
+    - name: cluster
+      port: 4370
+---
+# Client-facing service
+apiVersion: v1
+kind: Service
+metadata:
+  name: emqx
+  namespace: wildfire-ops
+spec:
+  selector:
+    app: wildfire-mqtt
+  ports:
+    - name: mqtt
+      port: 1883
+      targetPort: 1883
+    - name: ws
+      port: 8083
+      targetPort: 8083
+    - name: dashboard
+      port: 18083
+      targetPort: 18083

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mission-dispatcher
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-mission-dispatcher
+    tier: orchestration
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wildfire-mission-dispatcher
+  template:
+    metadata:
+      labels:
+        app: wildfire-mission-dispatcher
+        tier: orchestration
+    spec:
+      serviceAccountName: wildfire-ops-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: mission-dispatcher
+          image: ghcr.io/bigmt/wildfire-mission-dispatcher:latest
+          ports:
+            - containerPort: 8089
+              name: health
+          envFrom:
+            - configMapRef:
+                name: wildfire-config
+            - secretRef:
+                name: wildfire-secrets
+          env:
+            - name: MQTT_URL
+              value: "mqtt://emqx:1883"
+            - name: ALERTS_TOPIC
+              value: "wildfire/alerts"
+            - name: DISPATCHER_MISSIONS_TOPIC
+              value: "missions/updates"
+            - name: SUMMIT_API_URL
+              value: "http://apigw:8000"
+            - name: DISPATCHER_MIN_CONFIDENCE
+              value: "0.8"
+            - name: DISPATCHER_HEALTH_PORT
+              value: "8089"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8089
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8089
+            initialDelaySeconds: 20
+            periodSeconds: 30

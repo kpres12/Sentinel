@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apigw
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-api-gateway
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: wildfire-api-gateway
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: wildfire-api-gateway
+        tier: backend
+    spec:
+      serviceAccountName: wildfire-ops-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: apigw
+          image: ghcr.io/bigmt/wildfire-apigw:latest
+          ports:
+            - containerPort: 8000
+              name: http
+            - containerPort: 50051
+              name: grpc
+          envFrom:
+            - configMapRef:
+                name: wildfire-config
+            - secretRef:
+                name: wildfire-secrets
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+      initContainers:
+        - name: run-migrations
+          image: ghcr.io/bigmt/wildfire-apigw:latest
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: wildfire-config
+            - secretRef:
+                name: wildfire-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apigw
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-api-gateway
+spec:
+  selector:
+    app: wildfire-api-gateway
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+    - name: grpc
+      port: 50051
+      targetPort: 50051

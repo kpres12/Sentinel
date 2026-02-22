@@ -164,22 +164,22 @@ services:
     volumes:
       - ../../apps/edge-agent:/app
 
-  # Triangulation Service (stub)
+  # Triangulation Service (real engine)
   triangulate:
     build:
-      context: ../../apps/triangulate
-      dockerfile: Dockerfile
+      context: ../../
+      dockerfile: apps/triangulate/Dockerfile
     container_name: wildfire-triangulate
     env_file:
       - ../../.env
     ports:
       - "8101:8101"
 
-  # Prediction Service (stub)
+  # Prediction Service (real engine)
   predict:
     build:
-      context: ../../apps/predict
-      dockerfile: Dockerfile
+      context: ../../
+      dockerfile: apps/predict/Dockerfile
     container_name: wildfire-predict
     env_file:
       - ../../.env
@@ -265,6 +265,43 @@ services:
       - summit-integration
     volumes:
       - ../../apps/fireline-bot:/app
+
+  # Keycloak (OIDC Identity Provider)
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: wildfire-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ***REMOVED***
+    command: ["start-dev", "--import-realm"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n' >&3 && cat <&3 | grep -q 200"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Data Ingest Service
+  ingest:
+    build:
+      context: ../../
+      dockerfile: apps/ingest/Dockerfile
+    container_name: wildfire-ingest
+    env_file:
+      - ../../.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://wildfire:***REMOVED***@postgres:5432/wildfire_ops}
+      FIRMS_MAP_KEY: ${FIRMS_MAP_KEY:-}
+      NOAA_API_TOKEN: ${NOAA_API_TOKEN:-}
+      INGEST_PORT: 8103
+    ports:
+      - "8103:8103"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:

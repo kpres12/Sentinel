@@ -1,0 +1,223 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: wildfire-ops
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      - /etc/prometheus/rules/*.yml
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ["alertmanager:9093"]
+
+    scrape_configs:
+      - job_name: "apigw"
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["apigw:8000"]
+            labels:
+              service: api-gateway
+
+      - job_name: "triangulate"
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["triangulate:8101"]
+            labels:
+              service: triangulate
+
+      - job_name: "predict"
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["predict:8102"]
+            labels:
+              service: predict
+
+      - job_name: "ingest"
+        metrics_path: /metrics
+        static_configs:
+          - targets: ["ingest:8103"]
+            labels:
+              service: ingest
+
+      - job_name: "emqx"
+        metrics_path: /api/v5/prometheus/stats
+        static_configs:
+          - targets: ["emqx:18083"]
+            labels:
+              service: mqtt
+
+      - job_name: "node-exporter"
+        static_configs:
+          - targets: ["node-exporter:9100"]
+
+  alerts.yml: |
+    groups:
+      - name: wildfire-ops
+        rules:
+          - alert: ServiceDown
+            expr: up == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Service {{ $labels.job }} is down"
+              description: "{{ $labels.instance }} has been unreachable for > 1 minute."
+
+          - alert: HighErrorRate
+            expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High error rate on {{ $labels.job }}"
+              description: "Error rate exceeds 5% for 5 minutes."
+
+          - alert: HighLatency
+            expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High p95 latency on {{ $labels.job }}"
+              description: "p95 latency > 2s for 5 minutes."
+
+          - alert: PostgresDown
+            expr: pg_up == 0
+            for: 30s
+            labels:
+              severity: critical
+            annotations:
+              summary: "PostgreSQL is unreachable"
+
+          - alert: RedisDown
+            expr: redis_up == 0
+            for: 30s
+            labels:
+              severity: critical
+            annotations:
+              summary: "Redis is unreachable"
+
+          - alert: MQTTBrokerDown
+            expr: emqx_connections_count < 0 or up{job="emqx"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "EMQX MQTT broker is down"
+
+          - alert: HighFireRisk
+            expr: wildfire_fusion_risk_score > 0.9
+            for: 0s
+            labels:
+              severity: critical
+            annotations:
+              summary: "Fire risk score above 0.9 detected"
+              description: "Sensor fusion reports extreme fire risk at {{ $labels.zone }}"
+
+          - alert: DiskSpaceLow
+            expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Disk space below 10% on {{ $labels.instance }}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: wildfire-ops
+  labels:
+    app: prometheus
+    tier: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+        tier: monitoring
+    spec:
+      serviceAccountName: wildfire-ops-sa
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.48.1
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--storage.tsdb.retention.time=30d"
+            - "--web.enable-lifecycle"
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+            - name: rules
+              mountPath: /etc/prometheus/rules/alerts.yml
+              subPath: alerts.yml
+            - name: data
+              mountPath: /prometheus
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 15
+            periodSeconds: 30
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: rules
+          configMap:
+            name: prometheus-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: prometheus-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  namespace: wildfire-ops
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: wildfire-ops
+spec:
+  selector:
+    app: prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090

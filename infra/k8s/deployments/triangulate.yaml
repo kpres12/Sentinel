@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: triangulate
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-triangulate
+    tier: compute
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wildfire-triangulate
+  template:
+    metadata:
+      labels:
+        app: wildfire-triangulate
+        tier: compute
+    spec:
+      serviceAccountName: wildfire-ops-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: triangulate
+          image: ghcr.io/bigmt/wildfire-triangulate:latest
+          ports:
+            - containerPort: 8101
+          envFrom:
+            - configMapRef:
+                name: wildfire-config
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8101
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8101
+            initialDelaySeconds: 20
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: triangulate
+  namespace: wildfire-ops
+spec:
+  selector:
+    app: wildfire-triangulate
+  ports:
+    - port: 8101
+      targetPort: 8101

@@ -1,0 +1,265 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: wildfire-ops
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-provider
+  namespace: wildfire-ops
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: wildfire-ops
+        orgId: 1
+        folder: Wildfire Ops
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-overview
+  namespace: wildfire-ops
+data:
+  wildfire-overview.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "links": [],
+      "panels": [
+        {
+          "title": "Service Health",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+          "targets": [{ "expr": "count(up == 1)", "legendFormat": "Healthy Services" }],
+          "fieldConfig": {
+            "defaults": {
+              "thresholds": {
+                "steps": [
+                  { "color": "red", "value": 0 },
+                  { "color": "yellow", "value": 3 },
+                  { "color": "green", "value": 5 }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "title": "Request Rate (all services)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "targets": [
+            { "expr": "sum(rate(http_requests_total[5m])) by (job)", "legendFormat": "{{ job }}" }
+          ]
+        },
+        {
+          "title": "Error Rate (5xx)",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "targets": [
+            { "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) by (job)", "legendFormat": "{{ job }}" }
+          ],
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "fixed", "fixedColor": "red" } }
+          }
+        },
+        {
+          "title": "p95 Latency",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job))", "legendFormat": "{{ job }}" }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "s" }
+          }
+        },
+        {
+          "title": "Fire Risk Score (Sensor Fusion)",
+          "type": "gauge",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "targets": [
+            { "expr": "max(wildfire_fusion_risk_score)", "legendFormat": "Max Risk" }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "min": 0, "max": 1,
+              "thresholds": {
+                "steps": [
+                  { "color": "green", "value": 0 },
+                  { "color": "yellow", "value": 0.5 },
+                  { "color": "orange", "value": 0.75 },
+                  { "color": "red", "value": 0.9 }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "title": "MQTT Connected Clients",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 8, "x": 0, "y": 20 },
+          "targets": [
+            { "expr": "emqx_connections_count", "legendFormat": "Connections" }
+          ]
+        },
+        {
+          "title": "MQTT Messages/sec",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 16, "x": 8, "y": 20 },
+          "targets": [
+            { "expr": "rate(emqx_messages_received[5m])", "legendFormat": "Received" },
+            { "expr": "rate(emqx_messages_sent[5m])", "legendFormat": "Sent" }
+          ]
+        },
+        {
+          "title": "PostgreSQL Active Connections",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+          "targets": [
+            { "expr": "pg_stat_activity_count", "legendFormat": "Active" }
+          ]
+        },
+        {
+          "title": "Ingest Pipeline Runs",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+          "targets": [
+            { "expr": "rate(ingest_runs_total[5m])", "legendFormat": "{{ source }}" }
+          ]
+        },
+        {
+          "title": "Active Alerts",
+          "type": "table",
+          "gridPos": { "h": 6, "w": 24, "x": 0, "y": 36 },
+          "targets": [
+            { "expr": "ALERTS{alertstate=\"firing\"}", "format": "table", "instant": true }
+          ]
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["wildfire", "operations"],
+      "templating": { "list": [] },
+      "time": { "from": "now-6h", "to": "now" },
+      "title": "Wildfire Operations Overview",
+      "uid": "wildfire-overview"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: wildfire-ops
+  labels:
+    app: grafana
+    tier: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+        tier: monitoring
+    spec:
+      securityContext:
+        runAsUser: 472
+        fsGroup: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.2.3
+          ports:
+            - containerPort: 3001
+          env:
+            - name: GF_SERVER_HTTP_PORT
+              value: "3001"
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wildfire-secrets
+                  key: SECRET_KEY
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "false"
+            - name: GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH
+              value: /var/lib/grafana/dashboards/wildfire-overview.json
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboards-provider
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboard-overview
+              mountPath: /var/lib/grafana/dashboards
+            - name: data
+              mountPath: /var/lib/grafana
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+        - name: dashboards-provider
+          configMap:
+            name: grafana-dashboards-provider
+        - name: dashboard-overview
+          configMap:
+            name: grafana-dashboard-overview
+        - name: data
+          persistentVolumeClaim:
+            claimName: grafana-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data
+  namespace: wildfire-ops
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: wildfire-ops
+spec:
+  selector:
+    app: grafana
+  ports:
+    - port: 3001
+      targetPort: 3001

@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-postgres
+    tier: data
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wildfire-postgres
+  template:
+    metadata:
+      labels:
+        app: wildfire-postgres
+        tier: data
+    spec:
+      securityContext:
+        runAsUser: 999
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgis/postgis:15-3.3
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: wildfire-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: wildfire-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wildfire-secrets
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          args:
+            - "-c"
+            - "shared_preload_libraries=postgis-3"
+            - "-c"
+            - "max_connections=200"
+            - "-c"
+            - "shared_buffers=512MB"
+            - "-c"
+            - "effective_cache_size=1536MB"
+            - "-c"
+            - "wal_level=replica"
+            - "-c"
+            - "max_wal_senders=5"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - "-U"
+                - "$(POSTGRES_USER)"
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - "-U"
+                - "$(POSTGRES_USER)"
+            initialDelaySeconds: 30
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 100Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: wildfire-ops
+spec:
+  clusterIP: None
+  selector:
+    app: wildfire-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

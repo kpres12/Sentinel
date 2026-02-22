@@ -1,0 +1,166 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/wildfire
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ── Build & push images ──────────────────────────────────────────
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        service:
+          - { name: apigw, context: ./apps/apigw, dockerfile: ./apps/apigw/Dockerfile }
+          - { name: console, context: ./apps/console, dockerfile: ./apps/console/Dockerfile }
+          - { name: triangulate, context: ".", dockerfile: ./apps/triangulate/Dockerfile }
+          - { name: predict, context: ".", dockerfile: ./apps/predict/Dockerfile }
+          - { name: ingest, context: ".", dockerfile: ./apps/ingest/Dockerfile }
+          - { name: mission-dispatcher, context: ".", dockerfile: ./apps/mission-dispatcher/Dockerfile }
+          - { name: edge-agent, context: ./apps/edge-agent, dockerfile: ./apps/edge-agent/Dockerfile }
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}-${{ matrix.service.name }}
+          tags: |
+            type=sha
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Deploy to staging (auto on main push) ────────────────────────
+  staging:
+    name: Deploy to Staging
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.wildfire-ops.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Set kubeconfig
+        run: echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+
+      - name: Update image tags
+        run: |
+          TAG="sha-${GITHUB_SHA::7}"
+          for svc in apigw console triangulate predict ingest mission-dispatcher edge-agent; do
+            kubectl set image deployment/${svc} \
+              ${svc}=${{ env.IMAGE_PREFIX }}-${svc}:${TAG} \
+              -n wildfire-ops --record || true
+          done
+
+      - name: Wait for rollout
+        run: |
+          for svc in apigw console triangulate predict ingest; do
+            kubectl rollout status deployment/${svc} -n wildfire-ops --timeout=300s
+          done
+
+      - name: Run smoke tests
+        run: |
+          API_URL="${{ secrets.STAGING_API_URL }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/health")
+          if [ "$STATUS" != "200" ]; then
+            echo "Smoke test failed: API returned $STATUS"
+            exit 1
+          fi
+          echo "Staging smoke test passed"
+
+  # ── Deploy to production (manual approval required) ──────────────
+  production:
+    name: Deploy to Production
+    needs: staging
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'production' || github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://console.wildfire-ops.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Set kubeconfig
+        run: echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > $HOME/.kube/config
+
+      - name: Update image tags (canary — 1 replica first)
+        run: |
+          TAG="sha-${GITHUB_SHA::7}"
+          for svc in apigw console triangulate predict ingest mission-dispatcher edge-agent; do
+            kubectl set image deployment/${svc} \
+              ${svc}=${{ env.IMAGE_PREFIX }}-${svc}:${TAG} \
+              -n wildfire-ops --record || true
+          done
+
+      - name: Wait for rollout
+        run: |
+          for svc in apigw console triangulate predict ingest; do
+            kubectl rollout status deployment/${svc} -n wildfire-ops --timeout=600s
+          done
+
+      - name: Production smoke test
+        run: |
+          API_URL="${{ secrets.PRODUCTION_API_URL }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${API_URL}/health")
+          if [ "$STATUS" != "200" ]; then
+            echo "Production smoke test FAILED — rolling back"
+            for svc in apigw console triangulate predict ingest mission-dispatcher edge-agent; do
+              kubectl rollout undo deployment/${svc} -n wildfire-ops || true
+            done
+            exit 1
+          fi
+          echo "Production deploy successful"

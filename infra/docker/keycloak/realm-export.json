@@ -1,0 +1,88 @@
+{
+  "realm": "wildfire-ops",
+  "enabled": true,
+  "displayName": "Sentinel Wildfire Operations",
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Full platform access" },
+      { "name": "ops", "description": "Operations — missions, dispatch, asset control" },
+      { "name": "analyst", "description": "Analysis — predictions, risk scoring, reports" },
+      { "name": "observer", "description": "Read-only dashboard access" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "wildfire-console",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:3000/*", "http://localhost:3001/*"],
+      "webOrigins": ["http://localhost:3000", "http://localhost:3001"],
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "wildfire-api",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev-api-secret-change-in-prod",
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@sentinel.local",
+      "firstName": "Admin",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "***REMOVED***", "temporary": false }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "ops",
+      "email": "ops@sentinel.local",
+      "firstName": "Ops",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "ops123", "temporary": false }],
+      "realmRoles": ["ops"]
+    },
+    {
+      "username": "analyst",
+      "email": "analyst@sentinel.local",
+      "firstName": "Analyst",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "analyst123", "temporary": false }],
+      "realmRoles": ["analyst"]
+    },
+    {
+      "username": "observer",
+      "email": "observer@sentinel.local",
+      "firstName": "Observer",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "observer123", "temporary": false }],
+      "realmRoles": ["observer"]
+    }
+  ]
+}

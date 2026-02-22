@@ -84,7 +84,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: wildfire-api-gateway
+    name: apigw
   minReplicas: 3
   maxReplicas: 20
   metrics:
@@ -137,7 +137,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: wildfire-console
+    name: console
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -276,7 +276,7 @@ spec:
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: wildfire-api-gateway
+    name: apigw
   updatePolicy:
     updateMode: "Auto"
   resourcePolicy:

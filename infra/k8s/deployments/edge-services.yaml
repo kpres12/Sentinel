@@ -1,0 +1,198 @@
+# Edge Agent — runs per-device; in K8s this serves as the simulator / bridge
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: edge-agent
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-edge-agent
+    tier: edge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wildfire-edge-agent
+  template:
+    metadata:
+      labels:
+        app: wildfire-edge-agent
+        tier: edge
+    spec:
+      serviceAccountName: wildfire-ops-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: edge-agent
+          image: ghcr.io/bigmt/wildfire-edge-agent:latest
+          envFrom:
+            - configMapRef:
+                name: wildfire-config
+          env:
+            - name: MQTT_BROKER
+              value: emqx
+            - name: MQTT_PORT
+              value: "1883"
+            - name: DEVICE_ID
+              value: edge-device-001
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+---
+# Summit Integration Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: summit-integration
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-summit-integration
+    tier: integration
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wildfire-summit-integration
+  template:
+    metadata:
+      labels:
+        app: wildfire-summit-integration
+        tier: integration
+    spec:
+      serviceAccountName: wildfire-ops-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: summit-integration
+          image: ghcr.io/bigmt/wildfire-summit-integration:latest
+          ports:
+            - containerPort: 8001
+          envFrom:
+            - configMapRef:
+                name: wildfire-config
+            - secretRef:
+                name: wildfire-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: summit-integration
+  namespace: wildfire-ops
+spec:
+  selector:
+    app: wildfire-summit-integration
+  ports:
+    - port: 8001
+      targetPort: 8001
+---
+# Sentry Tower Agent
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentry-tower
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-sentry-tower
+    tier: edge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wildfire-sentry-tower
+  template:
+    metadata:
+      labels:
+        app: wildfire-sentry-tower
+        tier: edge
+    spec:
+      serviceAccountName: wildfire-ops-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: sentry-tower
+          image: ghcr.io/bigmt/wildfire-sentry-tower:latest
+          envFrom:
+            - configMapRef:
+                name: wildfire-config
+            - secretRef:
+                name: wildfire-secrets
+          env:
+            - name: TOWER_ID
+              value: tower-001
+            - name: SENTRY_MODEL_PATH
+              value: /models/smoke_detection.onnx
+            - name: SENTRY_CONF_THRESHOLD
+              value: "0.80"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+---
+# FireLine Bot Controller
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fireline-bot
+  namespace: wildfire-ops
+  labels:
+    app: wildfire-fireline-bot
+    tier: edge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wildfire-fireline-bot
+  template:
+    metadata:
+      labels:
+        app: wildfire-fireline-bot
+        tier: edge
+    spec:
+      serviceAccountName: wildfire-ops-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: fireline-bot
+          image: ghcr.io/bigmt/wildfire-fireline-bot:latest
+          envFrom:
+            - configMapRef:
+                name: wildfire-config
+            - secretRef:
+                name: wildfire-secrets
+          env:
+            - name: BOT_ID
+              value: fireline-bot-001
+            - name: BOT_SAFETY_ENABLED
+              value: "true"
+            - name: BOT_EMERGENCY_STOP_ENABLED
+              value: "true"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

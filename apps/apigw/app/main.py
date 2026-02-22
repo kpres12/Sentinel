@@ -171,6 +171,8 @@ for _name, _prefix, _tags in [
     ("app.routers.integrations", "/api/v1/integrations", ["integrations"]),
     ("app.routers.reports", "/api/v1/reports", ["reports"]),
     ("app.routers.admin", "/api/v1/admin", ["admin"]),
+    ("app.routers.fusion", "/api/v1/fusion", ["fusion"]),
+    ("app.routers.users", "/api/v1/users", ["users"]),
 ]:
     try:
         mod = __import__(_name, fromlist=["router"])  # type: ignore
