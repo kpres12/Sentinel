@@ -37,7 +37,7 @@ def get_url():
     """Get database URL from environment variables."""
     return os.getenv(
         "DATABASE_URL",
-        "postgresql://wildfire:***REMOVED***@localhost:5432/wildfire_ops"
+        "postgresql://wildfire:changeme@localhost:5432/wildfire_ops"
     )
 
 
