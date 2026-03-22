@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     # Database - REQUIRED
     DATABASE_URL: str = _get_required_env(
         "DATABASE_URL",
-        default_dev="postgresql://wildfire:***REMOVED***@localhost:5432/wildfire_ops"
+        default_dev="postgresql://wildfire:wildfire123@localhost:5432/wildfire_ops"
     )
     
     # Redis

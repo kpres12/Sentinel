@@ -4,7 +4,7 @@ fix: production security and reliability hardening
 
 - Remove hardcoded secrets from config files
   - config.py and database.py now fail fast in production if required env vars missing
-  - Remove default passwords (***REMOVED***, ***REMOVED***, your-secret-key-here)
+  - Remove default passwords (wildfire123, admin123, your-secret-key-here)
   - Add _get_required_env() helper that allows dev defaults but requires production values
 
 - Fix CORS and host security
@@ -53,7 +53,7 @@ fix: production security and reliability hardening
 
 - Harden production deployment script
   - validate_environment() now loads .env.production and validates all required vars
-  - Reject insecure default passwords (***REMOVED***, ***REMOVED***, etc)
+  - Reject insecure default passwords (wildfire123, admin123, etc)
   - Validate ALLOWED_HOSTS doesn't contain wildcard
   - build_and_push_images() validates AWS_ACCOUNT_ID and checks ECR login success
   - rollback_deployment() handles first deployment gracefully (no previous revision)

@@ -13,7 +13,7 @@ This document outlines the launch-blocking security and reliability issues that 
 
 ### ✅ Fix 1: Removed `.env` from Git & Created Secure Templates
 
-**Problem:** `.env` file containing secrets was committed to git. Default passwords (`***REMOVED***`, `***REMOVED***`) exposed in repo history.
+**Problem:** `.env` file containing secrets was committed to git. Default passwords (`wildfire123`, `admin123`) exposed in repo history.
 
 **Fixed:**
 - Removed `.env` from git tracking
@@ -166,7 +166,7 @@ async def create_mission(
 - `validate_environment()`:
   - Loads `.env.production` or exits
   - Checks all required vars
-  - Rejects insecure passwords (`***REMOVED***`, `***REMOVED***`)
+  - Rejects insecure passwords (`wildfire123`, `admin123`)
   - Rejects wildcard in `ALLOWED_HOSTS`
 - `build_and_push_images()`:
   - Validates `AWS_ACCOUNT_ID` is set

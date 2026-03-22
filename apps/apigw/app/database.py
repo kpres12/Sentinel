@@ -16,7 +16,7 @@ def _get_database_url() -> str:
     if url is None:
         if is_dev:
             print("WARNING: Using dev DATABASE_URL. Set this in production!", file=__import__('sys').stderr)
-            return "postgresql://wildfire:***REMOVED***@localhost:5432/wildfire_ops"
+            return "postgresql://wildfire:wildfire123@localhost:5432/wildfire_ops"
         raise RuntimeError("DATABASE_URL environment variable is required in production")
     
     return url

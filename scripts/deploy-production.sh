@@ -135,7 +135,7 @@ validate_environment() {
     fi
     
     # Validate no default passwords are used
-    local insecure_passwords=("***REMOVED***" "***REMOVED***" "password" "your-secret-key-here")
+    local insecure_passwords=("wildfire123" "admin123" "password" "your-secret-key-here")
     for insecure in "${insecure_passwords[@]}"; do
         if [[ "$DATABASE_URL" == *"$insecure"* ]] || 
            [[ "$POSTGRES_PASSWORD" == *"$insecure"* ]] ||

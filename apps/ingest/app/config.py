@@ -7,7 +7,7 @@ import os
 
 class IngestConfig:
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://wildfire:***REMOVED***@localhost:5432/wildfire_ops")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://wildfire:wildfire123@localhost:5432/wildfire_ops")
 
     # NWS (free, no key needed)
     NWS_BASE_URL: str = "https://api.weather.gov"

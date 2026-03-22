@@ -2,12 +2,15 @@
 Authentication and authorization middleware for FastAPI.
 """
 
+import logging
 import os
 from typing import Optional, List
 from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
 import jwt
+
+logger = logging.getLogger(__name__)
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -73,38 +76,103 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
-    Simple in-memory rate limiter.
-    In production, use Redis-backed rate limiting.
+    Sliding window rate limiter backed by Redis when available,
+    with fallback to in-memory limiting.
     """
-    
+
     def __init__(self, app, max_requests: int = 100, window_seconds: int = 60):
         super().__init__(app)
         self.max_requests = max_requests
         self.window_seconds = window_seconds
-        self.requests: dict[str, list[float]] = {}
-    
+        self._requests: dict[str, list[float]] = {}
+        self._redis: Optional[object] = None
+        self._redis_init_attempted = False
+
+    async def _get_redis(self):
+        if self._redis_init_attempted:
+            return self._redis
+        self._redis_init_attempted = True
+        redis_host = os.getenv("REDIS_HOST")
+        if not redis_host:
+            logger.warning("REDIS_HOST not configured; rate limiter falling back to in-memory")
+            return None
+        try:
+            import redis.asyncio as aioredis
+            client = aioredis.Redis(
+                host=redis_host,
+                port=int(os.getenv("REDIS_PORT", "6379")),
+                password=os.getenv("REDIS_PASSWORD") or None,
+                socket_connect_timeout=2,
+                decode_responses=True,
+            )
+            await client.ping()
+            self._redis = client
+            logger.info("Rate limiter using Redis sliding window")
+        except Exception as e:
+            logger.warning("Redis unavailable; rate limiter falling back to in-memory: %s", e)
+            self._redis = None
+        return self._redis
+
+    async def _check_redis(self, client_ip: str, now: float) -> int:
+        """Return current request count using Redis ZADD/ZREMRANGEBYSCORE/ZCARD sliding window."""
+        import redis.asyncio as aioredis
+        redis_client: aioredis.Redis = self._redis
+        key = f"rl:{client_ip}"
+        window_start = now - self.window_seconds
+        pipe = redis_client.pipeline()
+        pipe.zremrangebyscore(key, "-inf", window_start)
+        pipe.zadd(key, {str(now): now})
+        pipe.zcard(key)
+        pipe.expire(key, self.window_seconds + 1)
+        results = await pipe.execute()
+        return results[2]
+
     async def dispatch(self, request: Request, call_next):
         import time
-        
-        # Skip rate limiting for health checks
+
         if request.url.path in {"/health", "/readiness", "/metrics"}:
             return await call_next(request)
-        
-        # Use client IP as identifier
+
         client_ip = request.client.host if request.client else "unknown"
         now = time.time()
-        
-        # Clean old requests
-        if client_ip in self.requests:
-            self.requests[client_ip] = [
-                req_time for req_time in self.requests[client_ip]
+
+        redis_client = await self._get_redis()
+
+        if redis_client is not None:
+            try:
+                count = await self._check_redis(client_ip, now)
+                remaining = max(0, self.max_requests - count)
+                if count > self.max_requests:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail=f"Rate limit exceeded. Max {self.max_requests} requests per {self.window_seconds}s",
+                        headers={
+                            "Retry-After": str(self.window_seconds),
+                            "X-RateLimit-Limit": str(self.max_requests),
+                            "X-RateLimit-Remaining": "0",
+                            "X-RateLimit-Reset": str(int(now + self.window_seconds)),
+                        },
+                    )
+                response = await call_next(request)
+                response.headers["X-RateLimit-Limit"] = str(self.max_requests)
+                response.headers["X-RateLimit-Remaining"] = str(remaining)
+                response.headers["X-RateLimit-Reset"] = str(int(now + self.window_seconds))
+                return response
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.warning("Redis rate limit check failed, falling back to in-memory: %s", e)
+
+        # In-memory fallback
+        if client_ip in self._requests:
+            self._requests[client_ip] = [
+                req_time for req_time in self._requests[client_ip]
                 if now - req_time < self.window_seconds
             ]
         else:
-            self.requests[client_ip] = []
-        
-        # Check rate limit
-        if len(self.requests[client_ip]) >= self.max_requests:
+            self._requests[client_ip] = []
+
+        if len(self._requests[client_ip]) >= self.max_requests:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Rate limit exceeded. Max {self.max_requests} requests per {self.window_seconds}s",
@@ -112,21 +180,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "Retry-After": str(self.window_seconds),
                     "X-RateLimit-Limit": str(self.max_requests),
                     "X-RateLimit-Remaining": "0",
-                    "X-RateLimit-Reset": str(int(now + self.window_seconds))
-                }
+                    "X-RateLimit-Reset": str(int(now + self.window_seconds)),
+                },
             )
-        
-        # Add current request
-        self.requests[client_ip].append(now)
-        
+
+        self._requests[client_ip].append(now)
+
         response = await call_next(request)
-        
-        # Add rate limit headers
-        remaining = self.max_requests - len(self.requests[client_ip])
+
+        remaining = self.max_requests - len(self._requests[client_ip])
         response.headers["X-RateLimit-Limit"] = str(self.max_requests)
         response.headers["X-RateLimit-Remaining"] = str(remaining)
         response.headers["X-RateLimit-Reset"] = str(int(now + self.window_seconds))
-        
+
         return response
 
 
@@ -165,8 +231,8 @@ def _get_keycloak_public_key(token: str) -> Optional[str]:
         for key_data in _jwks_cache["keys"].get("keys", []):
             if key_data.get("kid") == kid:
                 return jwk.construct(key_data).to_pem().decode()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Failed to fetch Keycloak public key: %s", e)
     return None
 
 
@@ -209,8 +275,8 @@ async def get_current_user(
                     payload["role"] = r
                     break
             return payload
-        except Exception:
-            pass  # Fall through to HS256
+        except Exception as e:
+            logger.warning("Keycloak RS256 token validation failed, falling back to HS256: %s", e)
 
     # Fallback: local HS256 token
     try:

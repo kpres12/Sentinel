@@ -1,6 +1,8 @@
 """
 Detections router: accepts detection events, stores in DB, updates in-memory tracks, and triggers mission creation for wildfire.
 """
+import asyncio
+import logging
 from datetime import datetime, timezone
 from typing import Dict, List
 from uuid import uuid4, UUID
@@ -10,12 +12,17 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Detection as DetectionModel, Mission as MissionModel
+from app.enums import MissionStatus
 from app.schemas.detection import DetectionIn, DetectionOut, TrackOut, TrackPosition
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 # In-memory tracks (very simple correlator by source_id)
+# TODO: Migrate TRACKS to Redis or DB - this dict is ephemeral and will be lost on process restart
 TRACKS: Dict[str, Dict[str, any]] = {}  # key: source_id, value: { track_id: UUID, positions: [TrackPosition] }
+_tracks_lock = asyncio.Lock()
 
 @router.post("/", response_model=DetectionOut)
 async def create_detection(body: DetectionIn, request: Request, db: Session = Depends(get_db)) -> DetectionOut:
@@ -37,12 +44,13 @@ async def create_detection(body: DetectionIn, request: Request, db: Session = De
         db.refresh(db_det)
 
         # Update track for this source_id
-        t = TRACKS.get(body.source_id)
         pos = TrackPosition(lat=body.lat, lon=body.lon, alt=body.alt, timestamp=body.timestamp)
-        if not t:
-            t = {"track_id": uuid4(), "positions": []}
-            TRACKS[body.source_id] = t
-        t["positions"].append(pos)
+        async with _tracks_lock:
+            t = TRACKS.get(body.source_id)
+            if not t:
+                t = {"track_id": uuid4(), "positions": []}
+                TRACKS[body.source_id] = t
+            t["positions"].append(pos)
 
         # Broadcast events
         try:
@@ -58,8 +66,8 @@ async def create_detection(body: DetectionIn, request: Request, db: Session = De
             await request.app.state.broadcast_event(payload)
             # Publish on bus
             await request.app.state.bus.publish("detections", payload)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Event broadcast failed: %s", e)
 
         # Auto-create a mission for wildfire detections above threshold
         if body.type in ("fire", "hotspot", "smoke") and body.confidence >= 0.7:
@@ -69,7 +77,7 @@ async def create_detection(body: DetectionIn, request: Request, db: Session = De
                 type="ember_damp",
                 priority="high",
                 description="AUTO: respond to detection",
-                status="pending",
+                status=MissionStatus.PENDING,
                 lat=body.lat,
                 lng=body.lon,
                 radius=200.0,
@@ -82,8 +90,8 @@ async def create_detection(body: DetectionIn, request: Request, db: Session = De
             db.commit()
             try:
                 await request.app.state.broadcast_event({"type": "mission_created", "id": mission_id, "lat": body.lat, "lon": body.lon})
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Event broadcast failed: %s", e)
 
         return DetectionOut(
             id=db_det.id,
@@ -104,6 +112,7 @@ async def create_detection(body: DetectionIn, request: Request, db: Session = De
 @router.get("/tracks", response_model=List[TrackOut])
 async def list_tracks() -> List[TrackOut]:
     out: List[TrackOut] = []
-    for _, t in TRACKS.items():
-        out.append(TrackOut(track_id=t["track_id"], positions=t["positions"], classification="fire", confidence=0.8))
+    async with _tracks_lock:
+        for _, t in TRACKS.items():
+            out.append(TrackOut(track_id=t["track_id"], positions=list(t["positions"]), classification="fire", confidence=0.8))
     return out

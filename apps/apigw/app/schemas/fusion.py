@@ -4,7 +4,7 @@ Sensor fusion and risk scoring schemas.
 
 from datetime import datetime
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class EnvironmentalInput(BaseModel):
@@ -12,6 +12,20 @@ class EnvironmentalInput(BaseModel):
     longitude: float
     timestamp: datetime
     fuel_model: int = Field(ge=1, le=13)
+
+    @field_validator('latitude')
+    @classmethod
+    def validate_lat(cls, v):
+        if not -90 <= v <= 90:
+            raise ValueError(f'Latitude must be between -90 and 90, got {v}')
+        return v
+
+    @field_validator('longitude')
+    @classmethod
+    def validate_lng(cls, v):
+        if not -180 <= v <= 180:
+            raise ValueError(f'Longitude must be between -180 and 180, got {v}')
+        return v
     slope_deg: float = Field(ge=0, le=90)
     aspect_deg: float = Field(ge=0, le=360)
     canopy_cover: float = Field(ge=0, le=1)

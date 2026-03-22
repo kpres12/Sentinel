@@ -58,7 +58,7 @@ jobs:
         image: postgis/postgis:15-3.3
         env:
           POSTGRES_USER: wildfire
-          POSTGRES_PASSWORD: ***REMOVED***
+          POSTGRES_PASSWORD: wildfire123
           POSTGRES_DB: wildfire_ops_test
         ports:
           - 5432:5432
@@ -103,7 +103,7 @@ jobs:
 
       - name: Run tests
         env:
-          DATABASE_URL: postgresql://wildfire:***REMOVED***@localhost:5432/wildfire_ops_test
+          DATABASE_URL: postgresql://wildfire:wildfire123@localhost:5432/wildfire_ops_test
           REDIS_HOST: localhost
           REDIS_PORT: 6379
           NODE_ENV: test

@@ -1,12 +1,13 @@
 """
 Missions API endpoints.
 - POST /api/v1/missions: accept a mission, publish to MQTT, and echo back
-- GET /api/v1/missions: list recent missions (in-memory store)
+- GET /api/v1/missions: list recent missions from database
 """
 
+import asyncio
+import logging
 from typing import Optional, List
 from datetime import datetime, timezone
-from collections import deque
 from uuid import uuid4
 import os
 
@@ -15,10 +16,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from app.database import get_db
-from app.models import Mission as MissionModel
-from pydantic import BaseModel, Field
+from app.models import Mission as MissionModel, AuditLog
+from app.enums import MissionStatus
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 import paho.mqtt.client as mqtt
+
+logger = logging.getLogger(__name__)
 
 # Environment
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
@@ -30,12 +34,8 @@ mqtt_client = mqtt.Client(client_id="apigw-missions")
 try:
     mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
     mqtt_client.loop_start()
-except Exception:
-    # Will attempt to publish later; failures are handled per publish
-    pass
-
-# In-memory store (recent missions)
-RECENT_MISSIONS: deque = deque(maxlen=200)
+except Exception as e:
+    logger.warning("MQTT connection failed at startup, will retry per publish: %s", e)
 
 router = APIRouter()
 
@@ -44,6 +44,20 @@ class MissionLocation(BaseModel):
     lat: float
     lng: float
     radius: Optional[float] = 200
+
+    @field_validator('lat')
+    @classmethod
+    def validate_lat(cls, v):
+        if not -90 <= v <= 90:
+            raise ValueError(f'Latitude must be between -90 and 90, got {v}')
+        return v
+
+    @field_validator('lng')
+    @classmethod
+    def validate_lng(cls, v):
+        if not -180 <= v <= 180:
+            raise ValueError(f'Longitude must be between -180 and 180, got {v}')
+        return v
 
 
 class MissionIn(BaseModel):
@@ -84,7 +98,7 @@ async def create_mission(mission: MissionIn, request: Request, db: Session = Dep
         now = datetime.now(tz=timezone.utc)
         # Initial status honors "require confirm" gate
         require_confirm = os.getenv("DISPATCHER_REQUIRE_CONFIRM", "false").lower() in ("1", "true", "yes")
-        initial_status = "proposed" if require_confirm else "pending"
+        initial_status = MissionStatus.PROPOSED if require_confirm else MissionStatus.PENDING
         out = MissionOut(
             id=mission_id,
             type=mission.type,
@@ -116,40 +130,62 @@ async def create_mission(mission: MissionIn, request: Request, db: Session = Dep
         db.add(db_obj)
         db.commit()
 
+        # Audit log
+        try:
+            user = getattr(request.state, "user", None)
+            user_id = user.get("sub") if isinstance(user, dict) else None
+            audit = AuditLog(
+                user_id=user_id,
+                action="create",
+                resource_type="mission",
+                resource_id=mission_id,
+                details={"type": out.type, "priority": out.priority, "status": str(out.status)},
+                ip_address=request.client.host if request.client else None,
+            )
+            db.add(audit)
+            db.commit()
+        except Exception as e:
+            logger.warning("Failed to write audit log: %s", e)
+
         # Publish to MQTT for real-time UI updates
         try:
             mqtt_client.publish(MISSIONS_TOPIC, out.model_dump_json(), qos=0)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("MQTT publish failed: %s", e)
 
         # Broadcast over WebSocket + bus
         try:
             payload = {"type": "mission_created", "mission": out.model_dump()}
             await request.app.state.broadcast_event(payload)
             await request.app.state.bus.publish("missions", payload)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Event broadcast failed: %s", e)
 
         # Schedule simple status transitions (pending->active->completed)
-        import asyncio
         async def _advance():
             try:
                 await asyncio.sleep(5)
                 row = db.query(MissionModel).filter(MissionModel.mission_id == mission_id).first()
                 if row:
-                    row.status = "active"
+                    row.status = MissionStatus.ACTIVE
                     db.commit()
-                    await request.app.state.broadcast_event({"type": "mission_updated", "id": mission_id, "status": "active"})
+                    await request.app.state.broadcast_event({"type": "mission_updated", "id": mission_id, "status": MissionStatus.ACTIVE})
                 await asyncio.sleep(10)
                 row = db.query(MissionModel).filter(MissionModel.mission_id == mission_id).first()
                 if row:
-                    row.status = "completed"
+                    row.status = MissionStatus.COMPLETED
                     row.progress = 100
                     db.commit()
-                    await request.app.state.broadcast_event({"type": "mission_updated", "id": mission_id, "status": "completed", "progress": 100})
-            except Exception:
-                pass
-        asyncio.create_task(_advance())
+                    await request.app.state.broadcast_event({"type": "mission_updated", "id": mission_id, "status": MissionStatus.COMPLETED, "progress": 100})
+            except Exception as e:
+                logger.error("Mission advance task failed: %s", e)
+
+        def _log_task_error(t: asyncio.Task):
+            if not t.cancelled() and t.exception():
+                logger.error("Mission advance task failed: %s", t.exception())
+
+        task = asyncio.create_task(_advance())
+        task.add_done_callback(_log_task_error)
 
         return out
     except Exception as e:
@@ -213,18 +249,35 @@ async def update_mission(mission_id: str, body: MissionUpdateIn, request: Reques
             estimatedDuration=row.estimated_duration
         )
 
+        # Audit log
+        try:
+            user = getattr(request.state, "user", None)
+            user_id = user.get("sub") if isinstance(user, dict) else None
+            audit = AuditLog(
+                user_id=user_id,
+                action="update",
+                resource_type="mission",
+                resource_id=mission_id,
+                details=body.model_dump(exclude_none=True),
+                ip_address=request.client.host if request.client else None,
+            )
+            db.add(audit)
+            db.commit()
+        except Exception as e:
+            logger.warning("Failed to write audit log: %s", e)
+
         # Publish update
         try:
             mqtt_client.publish(MISSIONS_TOPIC, out.model_dump_json(), qos=0)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("MQTT publish failed: %s", e)
         # Broadcast over WebSocket + bus
         try:
             payload = {"type": "mission_updated", "mission": out.model_dump()}
             await request.app.state.broadcast_event(payload)
             await request.app.state.bus.publish("missions", payload)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Event broadcast failed: %s", e)
 
         return out
     except HTTPException:

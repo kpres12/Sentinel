@@ -34,7 +34,8 @@ async def _broadcast_event(payload: dict):
     for ws in list(_ws_clients):
         try:
             await ws.send_json(payload)
-        except Exception:
+        except Exception as e:
+            logger.warning("WebSocket send failed, removing client: %s", e)
             to_remove.add(ws)
     for ws in to_remove:
         _ws_clients.discard(ws)
@@ -75,7 +76,8 @@ async def lifespan(app: FastAPI):
                 for ws in list(_ws_clients):
                     try:
                         await ws.send_json(payload)
-                    except Exception:
+                    except Exception as e:
+                        logger.warning("Heartbeat send failed, removing client: %s", e)
                         to_remove.add(ws)
                 for ws in to_remove:
                     _ws_clients.discard(ws)
@@ -153,9 +155,11 @@ async def websocket_events(ws: WebSocket):
     _ws_clients.add(ws)
     try:
         while True:
-            # Echo any client message back; clients can send pings
-            _ = await ws.receive_text()
-            await ws.send_json({"type": "ack"})
+            try:
+                _ = await asyncio.wait_for(ws.receive_text(), timeout=30.0)
+                await ws.send_json({"type": "ack"})
+            except asyncio.TimeoutError:
+                await ws.send_json({"type": "ping"})
     except WebSocketDisconnect:
         _ws_clients.discard(ws)
 

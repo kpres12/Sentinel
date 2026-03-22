@@ -29,7 +29,7 @@ A monorepo for a wildfire operations platform prototype. It coordinates edge age
 3. Access the applications:
    - Ops Console: http://localhost:3000
    - API Gateway: http://localhost:8000 (docs at /docs)
-   - MQTT Dashboard: http://localhost:18083 (admin/***REMOVED***) — dev only
+   - MQTT Dashboard: http://localhost:18083 (admin/admin123) — dev only
 
 ### Environment Configuration
 

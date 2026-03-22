@@ -3,7 +3,7 @@ Prediction and modeling schemas for API requests and responses.
 """
 from datetime import datetime
 from typing import Dict, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Point(BaseModel):
@@ -11,11 +11,39 @@ class Point(BaseModel):
     longitude: float
     altitude: float = 0.0
 
+    @field_validator('latitude')
+    @classmethod
+    def validate_lat(cls, v):
+        if not -90 <= v <= 90:
+            raise ValueError(f'Latitude must be between -90 and 90, got {v}')
+        return v
+
+    @field_validator('longitude')
+    @classmethod
+    def validate_lng(cls, v):
+        if not -180 <= v <= 180:
+            raise ValueError(f'Longitude must be between -180 and 180, got {v}')
+        return v
+
 
 class EnvironmentalConditions(BaseModel):
     timestamp: datetime
     latitude: float
     longitude: float
+
+    @field_validator('latitude')
+    @classmethod
+    def validate_lat(cls, v):
+        if not -90 <= v <= 90:
+            raise ValueError(f'Latitude must be between -90 and 90, got {v}')
+        return v
+
+    @field_validator('longitude')
+    @classmethod
+    def validate_lng(cls, v):
+        if not -180 <= v <= 180:
+            raise ValueError(f'Longitude must be between -180 and 180, got {v}')
+        return v
     temperature_c: float
     relative_humidity: float = Field(ge=0, le=100)
     wind_speed_mps: float = Field(ge=0)

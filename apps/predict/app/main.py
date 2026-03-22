@@ -44,8 +44,8 @@ def _audit(input_data: dict, output_data: dict) -> None:
     try:
         with open(AUDIT_FILE, "a") as f:
             f.write(json.dumps({"ts": int(datetime.now(tz=timezone.utc).timestamp() * 1000), "input": input_data, "output": output_data}) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Failed to write audit log: %s", e)
 
 
 @app.get("/health")

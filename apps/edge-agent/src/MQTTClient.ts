@@ -5,6 +5,7 @@
 import * as mqtt from 'paho-mqtt'
 import { Logger } from './Logger'
 import { Config } from './Config'
+import { mqttTopics } from './mqttTopics'
 
 export class MQTTClient {
   private client: mqtt.Client | null = null
@@ -33,7 +34,7 @@ export class MQTTClient {
 
         // Prepare LWT (Last Will and Testament)
         const will = new mqtt.Message(JSON.stringify({ deviceId: this.config.deviceId, status: 'offline' }))
-        will.destinationName = `devices/${this.config.deviceId}/status`
+        will.destinationName = mqttTopics.status(this.config.deviceId)
         will.qos = 1
         will.retained = true
 
@@ -46,7 +47,7 @@ export class MQTTClient {
             // Publish online retained status
             try {
               const online = new mqtt.Message(JSON.stringify({ deviceId: this.config.deviceId, status: 'online' }))
-              online.destinationName = `devices/${this.config.deviceId}/status`
+              online.destinationName = mqttTopics.status(this.config.deviceId)
               online.qos = 1
               online.retained = true
               this.client!.send(online)
@@ -88,7 +89,7 @@ export class MQTTClient {
         }
 
         // Subscribe to control topic for runtime tuning
-        const controlTopic = `devices/${this.config.deviceId}/control`
+        const controlTopic = mqttTopics.control(this.config.deviceId)
         // Slight delay after connect to ensure subscribe runs
         setTimeout(() => {
           try {
@@ -213,7 +214,7 @@ export class MQTTClient {
       this.logger.debug(`Received message on topic ${topic}: ${payload}`)
 
       // Control messages for runtime tuning
-      if (topic === `devices/${this.config.deviceId}/control`) {
+      if (topic === mqttTopics.control(this.config.deviceId)) {
         try {
           const obj = JSON.parse(payload || '{}')
           if (typeof obj.faultDropPct === 'number') this.faultDropPct = Math.max(0, Math.min(1, obj.faultDropPct))

@@ -54,7 +54,7 @@
       "firstName": "Admin",
       "lastName": "User",
       "enabled": true,
-      "credentials": [{ "type": "password", "value": "***REMOVED***", "temporary": false }],
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
       "realmRoles": ["admin"]
     },
     {

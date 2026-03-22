@@ -7,6 +7,7 @@ import { TelemetryGenerator } from './TelemetryGenerator'
 import { DetectionGenerator } from './DetectionGenerator'
 import { Logger } from './Logger'
 import { Config } from './Config'
+import { mqttTopics } from './mqttTopics'
 import * as cron from 'node-cron'
 
 export class EdgeAgent {
@@ -80,7 +81,7 @@ export class EdgeAgent {
   private async publishTelemetry(): Promise<void> {
     try {
       const telemetry = this.telemetryGenerator.generate()
-      const topic = `devices/${this.config.deviceId}/telemetry`
+      const topic = mqttTopics.telemetry(this.config.deviceId)
       
       await this.mqttClient.publish(topic, JSON.stringify(telemetry))
       
@@ -95,7 +96,7 @@ export class EdgeAgent {
     try {
       const detection = this.detectionGenerator.generate()
       if (detection) {
-        const topic = `devices/${this.config.deviceId}/detections`
+        const topic = mqttTopics.detections(this.config.deviceId)
         
         await this.mqttClient.publish(topic, JSON.stringify(detection), 1)
         
